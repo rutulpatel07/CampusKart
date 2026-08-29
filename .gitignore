@@ -13,3 +13,8 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Firebase config: contains your own project's identifiers.
+# Download it from the Firebase Console and place it at app/google-services.json.
+# app/google-services.json.template is committed so a fresh clone still builds.
+/app/google-services.json
