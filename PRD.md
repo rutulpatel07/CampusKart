@@ -61,6 +61,8 @@
 | Listing permissions | Any signed-in user can create/list | No moderation layer planned for MVP |
 | AI/ML feature | Deferred — MVP ships without it first | Keep core flow (auth → post → feed → contact) stable before adding ML Kit categorization |
 | Seed data | Added in Week 8, real items from classmates | Demonstrates genuine usage instead of dummy data during presentation |
+| Navigation | Bottom navigation bar with four tabs (Feed, Post, My items, Profile) | SRS 3.1 left this open; a persistent bar keeps every top-level screen one tap away, which matters in a live demo. Item Detail is pushed over the feed rather than being a tab |
+| Theming | Fixed green-teal Material3 palette, dynamic colour off | Material You would recolour the app from each device's wallpaper, so the dev device, the demo device and the README screenshots would not match |
 
 ---
 

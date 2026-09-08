@@ -79,7 +79,7 @@ CampusKart is a standalone, self-contained mobile application. It is not part of
 
 ### 3.1 External Interface Requirements
 
-**User Interfaces:** Six screens — Login/Signup, Home Feed, Item Detail, Post Item, My Listings, Profile — built with Material3 components, following standard Android navigation patterns (bottom nav or top-level navigation graph).
+**User Interfaces:** Six screens — Login/Signup, Home Feed, Item Detail, Post Item, My Listings, Profile — built with Material3 components. Navigation is a persistent bottom navigation bar with four destinations (Feed, Post, My items, Profile), decided during the Day 2 design pass; Item Detail is pushed over the Feed rather than being a fifth tab.
 
 **Hardware Interfaces:** Device camera or photo gallery for capturing/selecting listing images.
 

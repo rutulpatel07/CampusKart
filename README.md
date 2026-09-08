@@ -68,6 +68,8 @@ have added your own.
 
 - **Day 1** — Firebase Auth, Cloud Firestore, Cloudinary, Coil and CameraX wired into the build,
   with an on-device connectivity check confirming every service is reachable.
+- **Day 2** — Mid-fidelity Compose mockups of all six screens, a fixed green-teal Material3
+  theme, and an on-device gallery for reviewing the sketches before any real screen is built.
 
 ### Planned
 
@@ -80,6 +82,40 @@ have added your own.
 
 Full requirements are specified in [`PRD.md`](PRD.md) and [`SRS.md`](SRS.md); the day-by-day
 schedule is in [`BUILD_PLAN.md`](BUILD_PLAN.md).
+
+---
+
+## Screen design
+
+All six screens were sketched in Compose before any of them was wired to Firebase, so the layout
+could be reviewed and changed while changing it was still cheap. The sketches live in
+`ui/mockups/` and are replaced screen by screen from Day 3; the package is deleted before
+submission.
+
+| # | Screen | What it holds |
+|---|---|---|
+| 1 | Login / Signup | Email + password; signup also collects name, branch, semester and WhatsApp number |
+| 2 | Home Feed | Search field, category chips, listing cards (photo, title, price, seller branch) |
+| 3 | Item Detail | Photo, description, price, condition, seller, and the "Chat on WhatsApp" button |
+| 4 | Post Item | Photo first, then title, description, category, price, condition |
+| 5 | My Listings | The user's own items with Edit / Mark sold / Delete on each card |
+| 6 | Profile | Name, branch, semester, WhatsApp number, and logout |
+
+Three decisions came out of this pass:
+
+**Bottom navigation, four tabs.** SRS 3.1 left the choice open between a bottom bar and a
+top-level graph. CampusKart uses a persistent bottom bar — Feed, Post, My items, Profile — so
+every top-level screen is one tap from every other. Item Detail is not a tab: it is pushed over
+the feed and hides the bar, because it exists to lead to a single action.
+
+**The WhatsApp button owns the bottom of Item Detail.** It is pinned below the scrolling content
+in WhatsApp's own green, rather than sitting inline where it would scroll away. It is the one
+thing the whole screen is for.
+
+**A fixed palette instead of Material You.** Dynamic colour repaints the app from the phone's
+wallpaper, which would make the development device, the demo device and the README screenshots
+three different colours. The app ships a fixed green-teal scheme with a hand-written dark
+variant instead.
 
 ---
 
@@ -115,9 +151,13 @@ See [`PRD.md`](PRD.md) Section 8 for field-level detail.
 
 ```
 app/src/main/java/com/example/campuskart/
-├── MainActivity.kt          # entry point (currently the Day 1 setup screen)
-├── setup/SetupCheck.kt      # temporary: verifies Firebase + Cloudinary connectivity
-└── ui/theme/                # Material3 theme
+├── MainActivity.kt          # entry point (currently the Day 2 mockup gallery)
+├── setup/                   # temporary: verifies Firebase + Cloudinary connectivity
+│   ├── SetupCheck.kt
+│   └── SetupStatusScreen.kt
+└── ui/
+    ├── mockups/             # temporary: Day 2 sketches of all six screens
+    └── theme/               # Material3 theme — fixed green-teal palette
 ```
 
 ---

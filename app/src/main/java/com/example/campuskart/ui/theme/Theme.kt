@@ -1,58 +1,89 @@
 package com.example.campuskart.ui.theme
 
-import android.app.Activity
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+private val LightColors = lightColorScheme(
+    primary = GreenPrimaryLight,
+    onPrimary = GreenOnPrimaryLight,
+    primaryContainer = GreenPrimaryContainerLight,
+    onPrimaryContainer = GreenOnPrimaryContainerLight,
+    secondary = GreenSecondaryLight,
+    onSecondary = GreenOnSecondaryLight,
+    secondaryContainer = GreenSecondaryContainerLight,
+    onSecondaryContainer = GreenOnSecondaryContainerLight,
+    tertiary = BlueTertiaryLight,
+    onTertiary = BlueOnTertiaryLight,
+    tertiaryContainer = BlueTertiaryContainerLight,
+    onTertiaryContainer = BlueOnTertiaryContainerLight,
+    error = ErrorLight,
+    onError = OnErrorLight,
+    errorContainer = ErrorContainerLight,
+    onErrorContainer = OnErrorContainerLight,
+    background = SurfaceLight,
+    onBackground = OnSurfaceLight,
+    surface = SurfaceLight,
+    onSurface = OnSurfaceLight,
+    surfaceVariant = SurfaceVariantLight,
+    onSurfaceVariant = OnSurfaceVariantLight,
+    outline = OutlineLight,
+    outlineVariant = OutlineVariantLight,
+    surfaceContainerLowest = SurfaceContainerLowestLight,
+    surfaceContainerLow = SurfaceContainerLowLight,
+    surfaceContainer = SurfaceContainerLight,
+    surfaceContainerHigh = SurfaceContainerHighLight,
+    surfaceContainerHighest = SurfaceContainerHighestLight,
 )
 
-private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+private val DarkColors = darkColorScheme(
+    primary = GreenPrimaryDark,
+    onPrimary = GreenOnPrimaryDark,
+    primaryContainer = GreenPrimaryContainerDark,
+    onPrimaryContainer = GreenOnPrimaryContainerDark,
+    secondary = GreenSecondaryDark,
+    onSecondary = GreenOnSecondaryDark,
+    secondaryContainer = GreenSecondaryContainerDark,
+    onSecondaryContainer = GreenOnSecondaryContainerDark,
+    tertiary = BlueTertiaryDark,
+    onTertiary = BlueOnTertiaryDark,
+    tertiaryContainer = BlueTertiaryContainerDark,
+    onTertiaryContainer = BlueOnTertiaryContainerDark,
+    error = ErrorDark,
+    onError = OnErrorDark,
+    errorContainer = ErrorContainerDark,
+    onErrorContainer = OnErrorContainerDark,
+    background = SurfaceDark,
+    onBackground = OnSurfaceDark,
+    surface = SurfaceDark,
+    onSurface = OnSurfaceDark,
+    surfaceVariant = SurfaceVariantDark,
+    onSurfaceVariant = OnSurfaceVariantDark,
+    outline = OutlineDark,
+    outlineVariant = OutlineVariantDark,
+    surfaceContainerLowest = SurfaceContainerLowestDark,
+    surfaceContainerLow = SurfaceContainerLowDark,
+    surfaceContainer = SurfaceContainerDark,
+    surfaceContainerHigh = SurfaceContainerHighDark,
+    surfaceContainerHighest = SurfaceContainerHighestDark,
 )
 
+/**
+ * Dynamic (Material You) colour is intentionally not offered here. It would repaint the app from
+ * whatever wallpaper the phone is using, so the app on the development device, the demo device
+ * and the README screenshots would all be different colours. CampusKart ships a fixed palette
+ * instead - see Color.kt.
+ */
 @Composable
 fun CampusKartTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
-    content: @Composable () -> Unit
+    content: @Composable () -> Unit,
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
-
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = if (darkTheme) DarkColors else LightColors,
         typography = Typography,
-        content = content
+        content = content,
     )
 }
