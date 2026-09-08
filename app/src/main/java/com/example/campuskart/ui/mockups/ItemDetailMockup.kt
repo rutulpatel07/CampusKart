@@ -49,7 +49,7 @@ import com.example.campuskart.ui.theme.WhatsAppGreen
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ItemDetailMockup(modifier: Modifier = Modifier) {
+fun ItemDetailMockup(modifier: Modifier = Modifier, onBack: () -> Unit = {}) {
     val listing = MockDetailListing
 
     Scaffold(
@@ -58,7 +58,7 @@ fun ItemDetailMockup(modifier: Modifier = Modifier) {
             TopAppBar(
                 title = { Text("Listing") },
                 navigationIcon = {
-                    IconButton(onClick = {}) {
+                    IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },

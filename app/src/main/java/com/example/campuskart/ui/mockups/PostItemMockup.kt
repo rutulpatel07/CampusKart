@@ -48,11 +48,17 @@ import com.example.campuskart.ui.theme.CampusKartTheme
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun PostItemMockup(hasPhoto: Boolean = false, modifier: Modifier = Modifier) {
+fun PostItemMockup(
+    hasPhoto: Boolean = false,
+    modifier: Modifier = Modifier,
+    showTabBar: Boolean = true,
+) {
     Scaffold(
         modifier = modifier,
         topBar = { TopAppBar(title = { Text("Post an item") }) },
-        bottomBar = { MockBottomBar(MockTab.POST) },
+        // Hidden when the Day 3 navigation shell hosts this sketch, because the shell draws
+        // the real bottom bar itself - otherwise the screen would show two of them.
+        bottomBar = { if (showTabBar) MockBottomBar(MockTab.POST) },
     ) { inner ->
         Column(
             modifier = Modifier

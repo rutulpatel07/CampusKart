@@ -56,11 +56,17 @@ private val MyMockListings = listOf(
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MyListingsMockup(empty: Boolean = false, modifier: Modifier = Modifier) {
+fun MyListingsMockup(
+    empty: Boolean = false,
+    modifier: Modifier = Modifier,
+    showTabBar: Boolean = true,
+) {
     Scaffold(
         modifier = modifier,
         topBar = { TopAppBar(title = { Text("My listings") }) },
-        bottomBar = { MockBottomBar(MockTab.MINE) },
+        // Hidden when the Day 3 navigation shell hosts this sketch, because the shell draws
+        // the real bottom bar itself - otherwise the screen would show two of them.
+        bottomBar = { if (showTabBar) MockBottomBar(MockTab.MINE) },
     ) { inner ->
         if (empty) {
             EmptyState(modifier = Modifier.padding(inner))

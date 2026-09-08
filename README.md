@@ -70,6 +70,9 @@ have added your own.
   with an on-device connectivity check confirming every service is reachable.
 - **Day 2** — Mid-fidelity Compose mockups of all six screens, a fixed green-teal Material3
   theme, and an on-device gallery for reviewing the sketches before any real screen is built.
+- **Day 3** — The real navigation graph: a persistent four-tab bottom bar, Item Detail pushed
+  over the Feed, and finished Login and Signup screens with branch/semester dropdowns and a
+  WhatsApp number field that normalises whatever the user pastes. No Firebase calls yet.
 
 ### Planned
 
@@ -119,6 +122,34 @@ variant instead.
 
 ---
 
+## Navigation
+
+One flat navigation graph holds all seven destinations — Login, Signup, the four tabs, and Item
+Detail. Nesting it into separate "auth" and "main" sub-graphs would buy separate back stacks the
+app has no use for, and would obscure the one thing that does matter: Login and the Feed sharing
+a stack, so that signing in really removes the login form and signing out really clears the
+session.
+
+Routes are plain strings rather than Navigation Compose's type-safe `@Serializable` routes. With
+seven destinations and exactly one argument between them (`listingId`, on Item Detail), the
+type-safe form would add the kotlinx-serialization plugin to the build for no practical gain.
+
+The back stack behaves the way an Android user expects:
+
+| Action | Result |
+|---|---|
+| Log in / create account | Feed, with the auth screens dropped — back exits the app |
+| Tap a tab | Pops back to the Feed rather than stacking tabs; each tab keeps its own state |
+| Open a listing | Pushed over the Feed, bottom bar hidden |
+| Log out | Whole stack cleared, back to Login |
+
+Until Days 5–8 build them, the four tab destinations render their Day 2 sketches under a banner
+that names the day the real screen arrives, so the shell can be walked through as a whole app in
+the meantime. The Day 1 service check and the Day 2 mockup gallery are still reachable from a
+small **Dev tools** link at the bottom of the Login screen; both go away on Day 10.
+
+---
+
 ## Core mechanism: the WhatsApp deep link
 
 Rather than building a messaging backend, the "Chat on WhatsApp" button on Item Detail fires an
@@ -140,6 +171,11 @@ Two Firestore collections:
 
 **`users`** — `uid`, `name`, `branch`, `semester`, `whatsappNumber`
 
+`branch` and `semester` are self-declared but chosen from closed lists (CE / IT / CE-AI / Other,
+and 1–8). The feed shows a seller's branch on every card, so free text would render "CE", "ce"
+and "Computer Engg" as three different branches. `whatsappNumber` is stored as ten digits with no
+country code or separators, whatever the user typed.
+
 **`listings`** — `id`, `title`, `description`, `category`, `price`, `condition`, `photoUrl`,
 `sellerUid`, `sellerName`, `status`, `createdAt`
 
@@ -151,11 +187,16 @@ See [`PRD.md`](PRD.md) Section 8 for field-level detail.
 
 ```
 app/src/main/java/com/example/campuskart/
-├── MainActivity.kt          # entry point (currently the Day 2 mockup gallery)
+├── MainActivity.kt          # entry point — hosts the navigation graph
+├── model/
+│   └── CampusOptions.kt     # the fixed branch and semester lists
 ├── setup/                   # temporary: verifies Firebase + Cloudinary connectivity
 │   ├── SetupCheck.kt
 │   └── SetupStatusScreen.kt
 └── ui/
+    ├── auth/                # Login and Signup screens + the fields they share
+    ├── navigation/          # routes, the bottom bar, and the NavHost
+    ├── screens/             # temporary: sketch-backed placeholders for Days 5–8
     ├── mockups/             # temporary: Day 2 sketches of all six screens
     └── theme/               # Material3 theme — fixed green-teal palette
 ```
@@ -178,6 +219,22 @@ server the project doesn't have and can't pay for. CampusKart therefore uses an 
 preset, which means someone who decompiled the app could upload images to the account. For a
 free, serverless class project that was judged the right trade; a production app would put a
 small signing endpoint in front of it.
+
+**Nesting Scaffolds double-counts everything.** Hosting the Day 2 sketches inside the Day 3
+navigation shell put a `Scaffold` inside a `Scaffold`, and both of them wanted to draw the same
+things: two bottom navigation bars stacked on top of each other, and the status bar inset applied
+twice, which pushed every sketch screen a bar's height down the display. The bars were solved by
+giving each sketch a `showTabBar` switch the shell turns off. The insets needed
+`Modifier.consumeWindowInsets(innerPadding)` on the `NavHost` — padding a composable by the outer
+`Scaffold`'s inner padding positions it correctly but does not *tell* its children the inset has
+already been spent, so the nested `TopAppBar` adds it again.
+
+**`popUpTo` silently does nothing when it misses.** The bottom bar's tab-switching pops back to a
+fixed destination so tabs never stack up, and every guide writes that as
+`popUpTo(graph.findStartDestination().id)`. Here the graph's start destination is Login, which
+signing in has deliberately just removed from the back stack — so the pop matched nothing, did
+not error, and every tab tap quietly pushed another entry. Popping to the Feed explicitly, which
+is the real root of the tabbed area, fixed it.
 
 **A dependency ahead of the toolchain.** Coil 3.5.0+ is compiled with Kotlin 2.4, whose metadata
 the Kotlin 2.2 compiler bundled with AGP 9.3.1 cannot read — the build failed with a wall of

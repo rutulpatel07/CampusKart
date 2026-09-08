@@ -39,11 +39,13 @@ import com.example.campuskart.ui.theme.CampusKartTheme
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfileMockup(modifier: Modifier = Modifier) {
+fun ProfileMockup(modifier: Modifier = Modifier, showTabBar: Boolean = true) {
     Scaffold(
         modifier = modifier,
         topBar = { TopAppBar(title = { Text("Profile") }) },
-        bottomBar = { MockBottomBar(MockTab.PROFILE) },
+        // Hidden when the Day 3 navigation shell hosts this sketch, because the shell draws
+        // the real bottom bar itself - otherwise the screen would show two of them.
+        bottomBar = { if (showTabBar) MockBottomBar(MockTab.PROFILE) },
     ) { inner ->
         Column(
             modifier = Modifier

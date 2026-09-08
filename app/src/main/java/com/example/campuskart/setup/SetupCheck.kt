@@ -19,7 +19,9 @@ import java.util.concurrent.TimeUnit
  * configured and reachable, before any real feature code exists. It writes to Logcat under the
  * tag [TAG] and is rendered on screen by MainActivity.
  *
- * This whole file is scaffolding and gets deleted once the real screens land (Day 3 onwards).
+ * This whole file is scaffolding. From Day 3 it is no longer the launch screen - it sits behind
+ * the "Dev tools" link at the bottom of Login, where it stays useful for diagnosing a Firebase
+ * or Cloudinary problem - and it is deleted on Day 10.
  */
 object SetupCheck {
 

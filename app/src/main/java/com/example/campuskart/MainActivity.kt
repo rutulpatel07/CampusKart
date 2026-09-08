@@ -4,14 +4,15 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import com.example.campuskart.ui.mockups.MockupGallery
+import com.example.campuskart.ui.navigation.CampusKartApp
 import com.example.campuskart.ui.theme.CampusKartTheme
 
 /**
- * Day 2: the app launches into the mockup gallery so the six screen sketches can be reviewed on
- * a real device. The Day 1 setup check is still reachable as the last entry in that list.
+ * The app's single activity. Everything else is Compose destinations inside the one navigation
+ * graph in [CampusKartApp], which opens on the Login screen.
  *
- * From Day 3 this is replaced by the real navigation graph, starting at the Login screen.
+ * The Day 1 setup check and the Day 2 mockup gallery are still reachable, but no longer as the
+ * launch screen - they now sit behind the "Dev tools" link at the bottom of Login.
  */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -19,7 +20,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             CampusKartTheme {
-                MockupGallery()
+                CampusKartApp()
             }
         }
     }
