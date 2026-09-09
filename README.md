@@ -73,6 +73,10 @@ have added your own.
 - **Day 3** — The real navigation graph: a persistent four-tab bottom bar, Item Detail pushed
   over the Feed, and finished Login and Signup screens with branch/semester dropdowns and a
   WhatsApp number field that normalises whatever the user pastes. No Firebase calls yet.
+- **Day 4** — Working authentication. Signup creates a Firebase Auth account and writes the
+  matching `users` document, login signs an existing user back in, the session survives the app
+  being closed, and logging out clears it. Per-field validation, error messages written for a
+  student rather than a developer, and 14 JVM unit tests over the form rules.
 
 ### Planned
 
@@ -141,12 +145,49 @@ The back stack behaves the way an Android user expects:
 | Log in / create account | Feed, with the auth screens dropped — back exits the app |
 | Tap a tab | Pops back to the Feed rather than stacking tabs; each tab keeps its own state |
 | Open a listing | Pushed over the Feed, bottom bar hidden |
-| Log out | Whole stack cleared, back to Login |
+| Log out | Firebase session ended, whole stack cleared, back to Login |
+| Reopen the app while signed in | Opens on the Feed; Login is never shown |
 
 Until Days 5–8 build them, the four tab destinations render their Day 2 sketches under a banner
 that names the day the real screen arrives, so the shell can be walked through as a whole app in
 the meantime. The Day 1 service check and the Day 2 mockup gallery are still reachable from a
 small **Dev tools** link at the bottom of the Login screen; both go away on Day 10.
+
+---
+
+## Authentication
+
+Firebase Authentication with an email and password, and no email verification step — signup is
+open to anyone (PRD Section 6), so there is no college domain to check against.
+
+**Signup writes two things and needs both.** Creating the Auth account and writing the `users`
+profile document are separate calls to separate services, and the account is useless without the
+profile: `whatsappNumber` lives there, and a seller with no number cannot be contacted at all,
+which is the one thing the app exists to do. So the two are treated as a single operation — if
+the Firestore write fails, the just-created Auth account is deleted and the session cleared. See
+`data/AuthRepository.kt`.
+
+**The session persists.** Firebase stores a signed-in session on disk, so reopening the app goes
+straight to the Feed rather than asking for the password again. `Log out` on the Profile screen
+is the way back to Login.
+
+**Validation happens twice, on purpose.** The form rules in `ui/auth/AuthValidation.kt` run on
+the device so a mistake is reported in the field that is wrong, immediately, instead of after a
+network round trip returns one generic error. They are not a security boundary — Firebase
+re-checks the email and password itself, and the Firestore rules added on Day 8 do the same for
+data. The rules are plain Kotlin with no Android or Firebase imports, which is what lets them be
+covered by ordinary JVM unit tests:
+
+```
+gradlew testDebugUnitTest
+```
+
+| Field | Rule |
+|---|---|
+| Name / branch / semester | Required (FR-AUTH-002) |
+| WhatsApp number | Required (FR-AUTH-003), and ten digits starting 6–9 |
+| Email | Must look like an address; any domain accepted |
+| Password | At least 6 characters — Firebase's own minimum, checked here to save a round trip |
 
 ---
 
@@ -188,13 +229,16 @@ See [`PRD.md`](PRD.md) Section 8 for field-level detail.
 ```
 app/src/main/java/com/example/campuskart/
 ├── MainActivity.kt          # entry point — hosts the navigation graph
+├── data/                   # Firebase access — the only place the SDKs are touched
+│   ├── AuthRepository.kt    # signup, login, logout, and the users document
+│   └── UserProfile.kt       # the users collection schema (PRD Section 8)
 ├── model/
 │   └── CampusOptions.kt     # the fixed branch and semester lists
 ├── setup/                   # temporary: verifies Firebase + Cloudinary connectivity
 │   ├── SetupCheck.kt
 │   └── SetupStatusScreen.kt
 └── ui/
-    ├── auth/                # Login and Signup screens + the fields they share
+    ├── auth/                # Login and Signup screens, their ViewModels, and form rules
     ├── navigation/          # routes, the bottom bar, and the NavHost
     ├── screens/             # temporary: sketch-backed placeholders for Days 5–8
     ├── mockups/             # temporary: Day 2 sketches of all six screens
@@ -235,6 +279,16 @@ fixed destination so tabs never stack up, and every guide writes that as
 signing in has deliberately just removed from the back stack — so the pop matched nothing, did
 not error, and every tab tap quietly pushed another entry. Popping to the Feed explicitly, which
 is the real root of the tabbed area, fixed it.
+
+**Signup is two writes that have to behave like one.** `createUserWithEmailAndPassword` both
+creates the account and signs the new user in, so a Firestore failure on the very next line
+leaves the app holding a live session for an account with no name and no WhatsApp number — and
+retrying signup then fails with "email already in use" against an account the user can never
+usefully log into. There is no transaction spanning Auth and Firestore to reach for, so the fix
+is a manual rollback: delete the Auth user and sign out, putting the email address back in play.
+The awkward case is cancellation — if the user leaves the screen mid-request the coroutine is
+cancelled between the two writes, so `CancellationException` has to be caught, rolled back, and
+then rethrown rather than swallowed.
 
 **A dependency ahead of the toolchain.** Coil 3.5.0+ is compiled with Kotlin 2.4, whose metadata
 the Kotlin 2.2 compiler bundled with AGP 9.3.1 cannot read — the build failed with a wall of

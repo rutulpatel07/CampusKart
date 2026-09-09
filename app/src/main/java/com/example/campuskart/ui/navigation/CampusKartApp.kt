@@ -10,6 +10,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavHostController
@@ -19,14 +20,15 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.campuskart.ui.auth.LoginScreen
-import com.example.campuskart.ui.auth.SignupScreen
+import com.example.campuskart.data.AuthRepository
+import com.example.campuskart.ui.auth.LoginRoute
+import com.example.campuskart.ui.auth.SignupRoute
 import com.example.campuskart.ui.mockups.MockupGallery
 import com.example.campuskart.ui.screens.FeedPlaceholder
 import com.example.campuskart.ui.screens.ItemDetailPlaceholder
 import com.example.campuskart.ui.screens.MyListingsPlaceholder
 import com.example.campuskart.ui.screens.PostItemPlaceholder
-import com.example.campuskart.ui.screens.ProfilePlaceholder
+import com.example.campuskart.ui.screens.ProfilePlaceholderRoute
 
 /**
  * The whole app: one navigation graph, plus the bottom bar that appears on the four top-level
@@ -37,13 +39,22 @@ import com.example.campuskart.ui.screens.ProfilePlaceholder
  * one thing that does matter - Login and the feed being on the same stack, so signing out really
  * clears it - harder to read.
  *
- * Day 3 wires navigation only. Login and Signup move forward without checking anything, and the
- * four tabs still show their Day 2 sketches; Firebase Auth arrives on Day 4 and the real screens
- * on Days 5-8.
+ * Day 4 put Firebase Auth behind Login, Signup and Log out; the four tabs still show their Day 2
+ * sketches, and the real screens land on Days 5-8.
  */
 @Composable
 fun CampusKartApp(modifier: Modifier = Modifier) {
     val navController = rememberNavController()
+
+    // Firebase keeps a signed-in session on disk across app restarts, so a returning user should
+    // not be asked to log in again - the graph simply starts on the Feed instead of on Login.
+    //
+    // remember matters here. Without it, signing out would flip this to Login and swap the
+    // NavHost's start destination underneath a graph that is mid-navigation; the start
+    // destination is fixed for the life of the composition, and signOut() below does the moving.
+    val startDestination = remember {
+        if (AuthRepository.isSignedIn()) Routes.FEED else Routes.LOGIN
+    }
 
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
@@ -67,7 +78,7 @@ fun CampusKartApp(modifier: Modifier = Modifier) {
     ) { inner ->
         NavHost(
             navController = navController,
-            startDestination = Routes.LOGIN,
+            startDestination = startDestination,
             // consumeWindowInsets matters here: the mockup-backed placeholders each carry their
             // own Scaffold and TopAppBar, and those add status-bar padding of their own unless
             // they are told the outer Scaffold has already applied it. Without this the sketch
@@ -78,20 +89,16 @@ fun CampusKartApp(modifier: Modifier = Modifier) {
                 .fillMaxSize(),
         ) {
             composable(Routes.LOGIN) {
-                LoginScreen(
-                    // Day 4 replaces this with a real Firebase sign-in; today the credentials
-                    // are accepted as typed so the rest of the shell can be walked through.
-                    onLogin = { _, _ -> navController.enterApp() },
+                LoginRoute(
+                    onSignedIn = { navController.enterApp() },
                     onCreateAccount = { navController.navigate(Routes.SIGNUP) },
                     onOpenDevTools = { navController.navigate(Routes.DEV_TOOLS) },
                 )
             }
 
             composable(Routes.SIGNUP) {
-                SignupScreen(
-                    // Day 4 turns this form into a createUserWithEmailAndPassword call plus the
-                    // `users` document write (PRD.md Section 8).
-                    onCreateAccount = { navController.enterApp() },
+                SignupRoute(
+                    onSignedIn = { navController.enterApp() },
                     onBack = { navController.popBackStack() },
                 )
             }
@@ -107,7 +114,9 @@ fun CampusKartApp(modifier: Modifier = Modifier) {
             composable(Routes.MY_LISTINGS) { MyListingsPlaceholder() }
 
             composable(Routes.PROFILE) {
-                ProfilePlaceholder(onLogout = { navController.signOut() })
+                // The route clears the Firebase session itself (FR-AUTH-005); this only has to
+                // deal with the back stack afterwards.
+                ProfilePlaceholderRoute(onLoggedOut = { navController.signOut() })
             }
 
             composable(
@@ -173,7 +182,11 @@ private fun NavHostController.enterApp() {
     }
 }
 
-/** The reverse: clear everything and go back to Login. Day 8 adds the Firebase sign-out call. */
+/**
+ * The reverse: clear everything and go back to Login. The Firebase session is already gone by the
+ * time this runs - popping the whole graph is what stops the back button from walking into the
+ * feed of an account that is no longer signed in.
+ */
 private fun NavHostController.signOut() {
     navigate(Routes.LOGIN) {
         popUpTo(graph.id) { inclusive = true }

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -18,6 +19,7 @@ import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -27,55 +29,37 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.campuskart.model.CampusOptions
 import com.example.campuskart.ui.theme.CampusKartTheme
-
-/** The whole signup form in one object, so Day 4 can hand it to Firebase Auth and Firestore. */
-data class SignupForm(
-    val name: String,
-    val branch: String,
-    val semester: String,
-    val whatsappNumber: String,
-    val email: String,
-    val password: String,
-)
 
 /**
  * Screen 1b - Signup. Collects the Firebase Auth credentials and the whole `users` profile
  * document in one pass (PRD.md Section 8), because the WhatsApp number is what makes every
  * listing contactable - there is no sensible "fill this in later" state for it (FR-AUTH-003).
  *
- * Day 3 is UI and navigation only: [onCreateAccount] hands the filled form to the caller, which
- * currently just moves on to the feed. Day 4 replaces that with the Firebase Auth call, the
- * Firestore profile write, and the real per-field validation.
+ * Day 4 connected it: submitting now creates the Auth account and writes the profile document,
+ * and the two succeed or fail together (see AuthRepository.signUp). The screen stays a pure
+ * function of [SignupUiState]; [SignupRoute] below owns the ViewModel.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SignupScreen(
-    onCreateAccount: (SignupForm) -> Unit,
+    state: SignupUiState,
+    onFormChange: (SignupForm) -> Unit,
+    onSubmit: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var name by rememberSaveable { mutableStateOf("") }
-    var branch by rememberSaveable { mutableStateOf("") }
-    var semester by rememberSaveable { mutableStateOf("") }
-    var whatsapp by rememberSaveable { mutableStateOf("") }
-    var email by rememberSaveable { mutableStateOf("") }
-    var password by rememberSaveable { mutableStateOf("") }
-
-    // Again, not the real validation - Day 4 owns that, including the empty-WhatsApp rejection
-    // in FR-AUTH-003. This only keeps the button from looking ready while fields are blank.
-    val canSubmit = listOf(name, branch, semester, whatsapp, email, password)
-        .all(String::isNotBlank)
+    val form = state.form
+    val errors = state.errors
+    val enabled = !state.submitting
 
     Scaffold(
         modifier = modifier,
@@ -83,7 +67,10 @@ fun SignupScreen(
             TopAppBar(
                 title = { Text("Create account") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    // Disabled mid-request: leaving the screen while the account is being created
+                    // cancels the coroutine, and the repository then has to roll the half-made
+                    // account back. Blocking the exit for the second or two it takes is kinder.
+                    IconButton(onClick = onBack, enabled = enabled) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
@@ -102,10 +89,13 @@ fun SignupScreen(
             SectionLabel("About you")
 
             OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
+                value = form.name,
+                onValueChange = { onFormChange(form.copy(name = it)) },
                 label = { Text("Full name") },
                 leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+                supportingText = errors.name?.let { { Text(it) } },
+                isError = errors.name != null,
+                enabled = enabled,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Text,
                     imeAction = ImeAction.Next,
@@ -119,27 +109,39 @@ fun SignupScreen(
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 DropdownField(
                     label = "Branch",
-                    value = branch,
+                    value = form.branch,
                     options = CampusOptions.BRANCHES,
-                    onOptionSelected = { branch = it },
+                    onOptionSelected = { onFormChange(form.copy(branch = it)) },
+                    supportingText = errors.branch,
+                    isError = errors.branch != null,
+                    enabled = enabled,
                     modifier = Modifier.weight(1f),
                 )
                 DropdownField(
                     label = "Semester",
-                    value = semester,
+                    value = form.semester,
                     options = CampusOptions.SEMESTERS,
-                    onOptionSelected = { semester = it },
+                    onOptionSelected = { onFormChange(form.copy(semester = it)) },
+                    supportingText = errors.semester,
+                    isError = errors.semester != null,
+                    enabled = enabled,
                     modifier = Modifier.weight(1f),
                 )
             }
 
             OutlinedTextField(
-                value = whatsapp,
-                onValueChange = { input -> whatsapp = normalizeIndianMobile(input) },
+                value = form.whatsappNumber,
+                onValueChange = {
+                    onFormChange(form.copy(whatsappNumber = normalizeIndianMobile(it)))
+                },
                 label = { Text("WhatsApp number") },
                 leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
                 prefix = { Text("+91 ") },
-                supportingText = { Text("Required - this is how buyers reach you") },
+                supportingText = {
+                    Text(errors.whatsappNumber ?: "Required - this is how buyers reach you")
+                },
+                isError = errors.whatsappNumber != null,
+                enabled = enabled,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Phone,
                     imeAction = ImeAction.Next,
@@ -151,11 +153,15 @@ fun SignupScreen(
             SectionLabel("Login details")
 
             OutlinedTextField(
-                value = email,
-                onValueChange = { email = it.trim() },
+                value = form.email,
+                onValueChange = { onFormChange(form.copy(email = it.trim())) },
                 label = { Text("Email") },
                 leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
-                supportingText = { Text("Any email works - no college domain needed") },
+                supportingText = {
+                    Text(errors.email ?: "Any email works - no college domain needed")
+                },
+                isError = errors.email != null,
+                enabled = enabled,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Email,
                     imeAction = ImeAction.Next,
@@ -165,33 +171,35 @@ fun SignupScreen(
             )
 
             PasswordField(
-                value = password,
-                onValueChange = { password = it },
+                value = form.password,
+                onValueChange = { onFormChange(form.copy(password = it)) },
                 label = "Password",
-                supportingText = "At least 6 characters",
+                supportingText = errors.password
+                    ?: "At least ${AuthValidation.MIN_PASSWORD_LENGTH} characters",
+                isError = errors.password != null,
+                enabled = enabled,
             )
+
+            AuthErrorBanner(message = state.formError, modifier = Modifier.padding(top = 4.dp))
 
             Spacer(Modifier.height(4.dp))
 
             Button(
-                onClick = {
-                    onCreateAccount(
-                        SignupForm(
-                            name = name.trim(),
-                            branch = branch,
-                            semester = semester,
-                            whatsappNumber = whatsapp,
-                            email = email,
-                            password = password,
-                        ),
-                    )
-                },
-                enabled = canSubmit,
+                onClick = onSubmit,
+                enabled = state.canSubmit,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp),
             ) {
-                Text("Create account", style = MaterialTheme.typography.titleMedium)
+                if (state.submitting) {
+                    CircularProgressIndicator(
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(20.dp),
+                    )
+                } else {
+                    Text("Create account", style = MaterialTheme.typography.titleMedium)
+                }
             }
 
             // States FR-CONTACT-003 at the moment the number is asked for, rather than burying
@@ -206,6 +214,29 @@ fun SignupScreen(
             Spacer(Modifier.height(24.dp))
         }
     }
+}
+
+/** The stateful half: owns the [SignupViewModel] and navigates on a completed signup. */
+@Composable
+fun SignupRoute(
+    onSignedIn: () -> Unit,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: SignupViewModel = viewModel(),
+) {
+    val state = viewModel.uiState
+
+    LaunchedEffect(state.signedIn) {
+        if (state.signedIn) onSignedIn()
+    }
+
+    SignupScreen(
+        state = state,
+        onFormChange = viewModel::onFormChange,
+        onSubmit = viewModel::createAccount,
+        onBack = onBack,
+        modifier = modifier,
+    )
 }
 
 /**
@@ -235,8 +266,44 @@ private fun SectionLabel(text: String) {
     )
 }
 
-@Preview(showBackground = true, widthDp = 400, heightDp = 880)
+private val filledForm = SignupForm(
+    name = "Rutul Patel",
+    branch = "CE",
+    semester = "5",
+    whatsappNumber = "9876543210",
+    email = "rutul@example.com",
+    password = "secret1",
+)
+
+@Preview(showBackground = true, widthDp = 400, heightDp = 1100)
 @Composable
 private fun SignupScreenPreview() {
-    CampusKartTheme { SignupScreen(onCreateAccount = {}, onBack = {}) }
+    CampusKartTheme {
+        SignupScreen(
+            state = SignupUiState(form = filledForm),
+            onFormChange = {},
+            onSubmit = {},
+            onBack = {},
+        )
+    }
+}
+
+/** Every field failing at once - the layout that is hardest to get right and rarest to hit. */
+@Preview(showBackground = true, widthDp = 400, heightDp = 1100)
+@Composable
+private fun SignupScreenErrorPreview() {
+    CampusKartTheme {
+        SignupScreen(
+            state = SignupUiState(
+                form = SignupForm(email = "not-an-email", password = "abc"),
+                errors = AuthValidation.validateSignup(
+                    SignupForm(email = "not-an-email", password = "abc"),
+                ),
+                formError = "An account already uses this email. Try logging in instead.",
+            ),
+            onFormChange = {},
+            onSubmit = {},
+            onBack = {},
+        )
+    }
 }

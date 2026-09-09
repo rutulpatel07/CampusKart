@@ -9,7 +9,8 @@ import com.example.campuskart.ui.theme.CampusKartTheme
 
 /**
  * The app's single activity. Everything else is Compose destinations inside the one navigation
- * graph in [CampusKartApp], which opens on the Login screen.
+ * graph in [CampusKartApp], which opens on Login - or straight on the Feed, when Firebase still
+ * holds a signed-in session from a previous run.
  *
  * The Day 1 setup check and the Day 2 mockup gallery are still reachable, but no longer as the
  * launch screen - they now sit behind the "Dev tools" link at the bottom of Login.
