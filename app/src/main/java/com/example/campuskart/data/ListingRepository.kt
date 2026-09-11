@@ -3,6 +3,7 @@ package com.example.campuskart.data
 import android.util.Log
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
+import com.google.firebase.firestore.Query
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.tasks.await
 
@@ -10,6 +11,25 @@ import kotlinx.coroutines.tasks.await
 sealed interface ListingOutcome {
     data class Success(val listing: Listing) : ListingOutcome
     data class Failure(val message: String) : ListingOutcome
+}
+
+/** The result of reading the feed (FR-LIST-003). */
+sealed interface FeedOutcome {
+    data class Success(val listings: List<Listing>) : FeedOutcome
+    data class Failure(val message: String) : FeedOutcome
+}
+
+/**
+ * The result of reading one listing (FR-LIST-006).
+ *
+ * [Missing] is deliberately separate from [Failure]: a listing the seller has since deleted is a
+ * normal thing to arrive at from a stale feed, and telling the user "this listing is no longer
+ * available" is a different - and far less alarming - message than "something went wrong".
+ */
+sealed interface ListingDetailOutcome {
+    data class Success(val listing: Listing) : ListingDetailOutcome
+    data object Missing : ListingDetailOutcome
+    data class Failure(val message: String) : ListingDetailOutcome
 }
 
 /**
@@ -23,6 +43,12 @@ object ListingRepository {
 
     private const val TAG = "CampusKartListings"
     private const val LISTINGS = "listings"
+
+    // Field names as Firestore stores them. Referred to as strings because that is the only
+    // thing the query builder takes, and a typo here fails at runtime rather than at compile
+    // time - so they are written once, here, instead of at every call site.
+    private const val FIELD_STATUS = "status"
+    private const val FIELD_CREATED_AT = "createdAt"
 
     private val firestore: FirebaseFirestore get() = FirebaseFirestore.getInstance()
 
@@ -69,6 +95,54 @@ object ListingRepository {
         }
     }
 
+    /**
+     * The Home Feed: every available listing, newest first (FR-LIST-003).
+     *
+     * A one-shot `get()` rather than a `snapshots()` listener. A live listener would keep the
+     * feed updating by itself, but it also keeps a socket open for as long as the tab is on
+     * screen, and CampusKart's feed changes a few times a day - not a few times a minute. The
+     * Refresh action in the app bar covers the gap, and the screen reloads itself whenever the
+     * tab is resumed, so a listing posted a moment ago is there when the user walks back to it.
+     *
+     * Sold listings are filtered out by the query rather than in Kotlin, so a feed of twenty
+     * available items costs twenty document reads even once a semester of sold items has piled
+     * up behind them.
+     *
+     * Note this pairs an equality filter on `status` with an ordering on `createdAt`, which
+     * Firestore can only serve from a composite index - see [errorMessage] and README "Setup".
+     */
+    suspend fun availableListings(): FeedOutcome = try {
+        val snapshot = firestore.collection(LISTINGS)
+            .whereEqualTo(FIELD_STATUS, Listing.STATUS_AVAILABLE)
+            .orderBy(FIELD_CREATED_AT, Query.Direction.DESCENDING)
+            .get()
+            .await()
+        FeedOutcome.Success(snapshot.toObjects(Listing::class.java))
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Log.w(TAG, "Could not load the feed", e)
+        FeedOutcome.Failure(errorMessage(e, "Could not load listings. Please try again."))
+    }
+
+    /** One listing, for the Item Detail screen (FR-LIST-006). */
+    suspend fun listing(id: String): ListingDetailOutcome {
+        if (id.isBlank()) return ListingDetailOutcome.Missing
+        return try {
+            val document = firestore.collection(LISTINGS).document(id).get().await()
+            val listing = document.toObject(Listing::class.java)
+            if (listing == null) ListingDetailOutcome.Missing
+            else ListingDetailOutcome.Success(listing)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not load listing $id", e)
+            ListingDetailOutcome.Failure(
+                errorMessage(e, "Could not load this listing. Please try again."),
+            )
+        }
+    }
+
     private fun errorMessage(e: Exception): String = when {
         e !is FirebaseFirestoreException -> "Could not save your listing. Please try again."
 
@@ -80,5 +154,32 @@ object ListingRepository {
             "Could not reach the database. Check your connection and try again."
 
         else -> "Could not save your listing. Please try again."
+    }
+
+    /**
+     * The same translation for the read paths, with [fallback] as the generic ending.
+     *
+     * FAILED_PRECONDITION gets its own message because it means one specific, one-time thing:
+     * the composite index the feed query needs has not been created yet. Firestore's own
+     * exception carries a ready-made console link to create it, but that link only ever appears
+     * in Logcat - on screen the user would otherwise see "something went wrong" for a problem
+     * that is fixed by a single click.
+     */
+    private fun errorMessage(e: Exception, fallback: String): String = when {
+        e !is FirebaseFirestoreException -> fallback
+
+        e.code == FirebaseFirestoreException.Code.FAILED_PRECONDITION ->
+            "Firestore needs a one-time index for the feed. Open Logcat, find the " +
+                "\"FAILED_PRECONDITION\" line from Firestore and tap the console link in it - " +
+                "or see README \"Setup\". This only has to be done once."
+
+        e.code == FirebaseFirestoreException.Code.PERMISSION_DENIED ->
+            "You do not have permission to read listings. Check the Firestore rules " +
+                "(README - Setup)."
+
+        e.code == FirebaseFirestoreException.Code.UNAVAILABLE ->
+            "Could not reach the database. Check your connection and try again."
+
+        else -> fallback
     }
 }

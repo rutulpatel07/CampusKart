@@ -57,6 +57,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.example.campuskart.data.Listing
 import com.example.campuskart.data.ListingPhoto
+import com.example.campuskart.data.UserProfile
 import com.example.campuskart.model.ListingOptions
 import com.example.campuskart.ui.components.FormErrorBanner
 import com.example.campuskart.ui.theme.CampusKartTheme
@@ -192,7 +193,8 @@ fun PostItemScreen(
                 onSelect = { onFormChange(form.copy(condition = it)) },
             )
 
-            // The profile read that supplies sellerName failing is not a form problem, so it gets
+            // The profile read that supplies the seller name and branch failing is not a form
+            // problem, so it gets
             // its own line rather than the error banner - the form is still fine, it just cannot
             // be submitted yet.
             state.sellerError?.let {
@@ -501,7 +503,7 @@ private val filledForm = ListingForm(
 private fun PostItemEmptyPreview() {
     CampusKartTheme {
         PostItemScreen(
-            state = PostItemUiState(sellerName = "Rutul Patel"),
+            state = PostItemUiState(seller = PreviewSeller),
             onFormChange = {},
             onTakePhoto = {},
             onChoosePhoto = {},
@@ -540,7 +542,7 @@ private fun PostItemPublishingPreview() {
                 form = filledForm,
                 photoUri = Uri.EMPTY,
                 step = PublishStep.UPLOADING,
-                sellerName = "Rutul Patel",
+                seller = PreviewSeller,
             ),
             onFormChange = {},
             onTakePhoto = {},
@@ -563,7 +565,8 @@ private fun PostItemPublishedPreview() {
                     category = "Drafter",
                     price = 350,
                     condition = "Good",
-                    sellerName = "Rutul Patel",
+                    sellerName = PreviewSeller.name,
+                    sellerBranch = PreviewSeller.branch,
                 ),
             ),
             onFormChange = {},
@@ -574,3 +577,11 @@ private fun PostItemPublishedPreview() {
         )
     }
 }
+
+/** Preview-only stand-in for the signed-in user's `users` document. */
+private val PreviewSeller = UserProfile(
+    name = "Rutul Patel",
+    branch = "CE",
+    semester = "5",
+    whatsappNumber = "9876543210",
+)

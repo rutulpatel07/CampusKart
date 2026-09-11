@@ -19,8 +19,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.campuskart.ui.auth.AccountUiState
 import com.example.campuskart.ui.auth.AccountViewModel
-import com.example.campuskart.ui.mockups.HomeFeedMockup
-import com.example.campuskart.ui.mockups.ItemDetailMockup
 import com.example.campuskart.ui.mockups.MyListingsMockup
 import com.example.campuskart.ui.mockups.ProfileMockup
 
@@ -33,7 +31,8 @@ import com.example.campuskart.ui.mockups.ProfileMockup
  *
  * Nothing in here talks to Firebase or Cloudinary, and no control inside a sketch does anything.
  * This file, and the `ui/mockups` package it draws on, are deleted once Day 8 lands. Post Item
- * was the first to go, on Day 5.
+ * was the first to go, on Day 5; the Feed and Item Detail followed on Day 6. What is left is My
+ * items (Day 7) and Profile (Day 8).
  */
 
 /** Strip pinned above a sketch so it is never mistaken for a finished screen. */
@@ -75,22 +74,6 @@ private fun Sketch(
     Column(modifier = modifier.fillMaxSize()) {
         SketchBanner(buildDay = buildDay, action = action)
         content()
-    }
-}
-
-/**
- * Feed placeholder. Its banner carries the only way into Item Detail for now: the sketch's own
- * listing cards are inert, and the detail route needs to be reachable to confirm it pushes over
- * the feed and hides the bottom bar.
- */
-@Composable
-fun FeedPlaceholder(onOpenSampleItem: () -> Unit, modifier: Modifier = Modifier) {
-    Sketch(
-        buildDay = "Day 6",
-        modifier = modifier,
-        action = { TextButton(onClick = onOpenSampleItem) { Text("Open item") } },
-    ) {
-        HomeFeedMockup(showTabBar = false)
     }
 }
 
@@ -169,24 +152,5 @@ private fun SignedInSummary(account: AccountUiState, modifier: Modifier = Modifi
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-    }
-}
-
-@Composable
-fun ItemDetailPlaceholder(
-    listingId: String,
-    onBack: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Sketch(buildDay = "Day 6", modifier = modifier) {
-        // listingId is threaded through and shown so the route argument is visibly arriving;
-        // Day 6 uses it to fetch the real listing document instead.
-        Text(
-            text = "Route argument listingId = $listingId",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-        )
-        ItemDetailMockup(onBack = onBack)
     }
 }

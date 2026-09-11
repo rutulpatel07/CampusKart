@@ -7,6 +7,25 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!--
+        Android 11 stopped letting an app see what else is installed unless it says what it is
+        looking for. Without this block the "Chat on WhatsApp" button (FR-CONTACT-001) cannot
+        start WhatsApp by package name even when WhatsApp is sitting right there on the phone -
+        the intent simply fails to resolve.
+
+        Declaring the two packages is not a permission to read anything about them; it only makes
+        them visible to intent resolution. The https intent covers the browser fallback, for a
+        device (an emulator, most often) with no WhatsApp at all - see WhatsAppContact.openChat.
+    -->
+    <queries>
+        <package android:name="com.whatsapp" />
+        <package android:name="com.whatsapp.w4b" />
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+    </queries>
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"

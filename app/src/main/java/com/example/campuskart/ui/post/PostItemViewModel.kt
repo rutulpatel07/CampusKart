@@ -14,6 +14,7 @@ import com.example.campuskart.data.ListingOutcome
 import com.example.campuskart.data.ListingPhoto
 import com.example.campuskart.data.ListingRepository
 import com.example.campuskart.data.UploadOutcome
+import com.example.campuskart.data.UserProfile
 import kotlinx.coroutines.launch
 
 /**
@@ -39,8 +40,11 @@ data class PostItemUiState(
     val formError: String? = null,
     /** Set once the document exists in Firestore; the screen swaps to its success state. */
     val published: Listing? = null,
-    /** Denormalised onto the listing, so it has to be loaded before anything can be posted. */
-    val sellerName: String? = null,
+    /**
+     * The poster's own profile. Their name and branch are denormalised onto every listing they
+     * publish (see Listing), so it has to be loaded before anything can be posted.
+     */
+    val seller: UserProfile? = null,
     val sellerError: String? = null,
 ) {
     val publishing: Boolean get() = step != null
@@ -70,7 +74,8 @@ class PostItemViewModel(application: Application) : AndroidViewModel(application
     }
 
     /**
-     * Reads the signed-in user's name from their `users` document, for [Listing.sellerName].
+     * Reads the signed-in user's `users` document, for [Listing.sellerName] and
+     * [Listing.sellerBranch].
      *
      * Done up front rather than at publish time so that a profile that cannot be read is a
      * message on an empty form, not a failure after the photo has already been uploaded.
@@ -83,7 +88,7 @@ class PostItemViewModel(application: Application) : AndroidViewModel(application
                 if (profile == null) {
                     uiState.copy(sellerError = "Could not find your profile. Try logging out and back in.")
                 } else {
-                    uiState.copy(sellerName = profile.name)
+                    uiState.copy(seller = profile)
                 }
             } catch (e: Exception) {
                 uiState.copy(sellerError = "Could not load your profile: ${e.message}")
@@ -141,8 +146,8 @@ class PostItemViewModel(application: Application) : AndroidViewModel(application
         }
 
         val photoUri = state.photoUri ?: return
-        val sellerName = state.sellerName
-        if (sellerName.isNullOrBlank()) {
+        val seller = state.seller
+        if (seller == null || seller.name.isBlank()) {
             uiState = state.copy(
                 formError = "Your profile has not loaded yet, so the listing would have no seller name.",
             )
@@ -181,7 +186,8 @@ class PostItemViewModel(application: Application) : AndroidViewModel(application
                     price = ListingValidation.parsePrice(form.price) ?: 0,
                     condition = form.condition,
                     photoUrl = photoUrl,
-                    sellerName = sellerName,
+                    sellerName = seller.name,
+                    sellerBranch = seller.branch,
                 ),
             )
 
@@ -197,8 +203,8 @@ class PostItemViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    /** "Post another item" - back to an empty form, keeping the seller name already loaded. */
+    /** "Post another item" - back to an empty form, keeping the profile already loaded. */
     fun startAnother() {
-        uiState = PostItemUiState(sellerName = uiState.sellerName)
+        uiState = PostItemUiState(seller = uiState.seller)
     }
 }

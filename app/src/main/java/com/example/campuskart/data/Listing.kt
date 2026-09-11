@@ -37,6 +37,16 @@ data class Listing(
      * that is one query instead of one query plus N.
      */
     val sellerName: String = "",
+    /**
+     * Denormalised alongside [sellerName], and for the same reason.
+     *
+     * PRD.md Section 8 does not list this field, but Section 9 specifies the feed card as
+     * "photo, title, price, seller branch" - and branch lives on the `users` document. Reading it
+     * per card would turn a twenty-item feed into twenty-one queries, so it is copied onto the
+     * listing at publish time instead. Listings written before Day 6 carry an empty branch; the
+     * feed card simply omits it rather than showing a dangling separator.
+     */
+    val sellerBranch: String = "",
     val status: String = STATUS_AVAILABLE,
     /**
      * Left null when writing: `@ServerTimestamp` makes Firestore stamp it with the server's clock

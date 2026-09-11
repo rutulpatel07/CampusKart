@@ -52,6 +52,22 @@ The short version:
 4. Fill in `cloudinary.cloudName` and `cloudinary.uploadPreset` at the bottom of
    `local.properties`.
 5. Sync Gradle and run. The temporary setup screen should show five green PASS rows.
+6. **Create the feed's Firestore index** (once, after the first listing exists) — see below.
+
+### The Home Feed needs one Firestore index
+
+The feed asks Firestore for *available listings, newest first*. That pairs an equality filter on
+`status` with an ordering on `createdAt`, and Firestore can only serve that combination from a
+**composite index** — which it does not create by itself. Until the index exists, the Feed tab
+shows "Firestore needs a one-time index for the feed" instead of listings.
+
+Two ways to create it, either is fine:
+
+- **From Logcat (easiest).** Open the Feed once, find the `FAILED_PRECONDITION` line from
+  Firestore in Logcat, and tap the `https://console.firebase.google.com/...` link in it. The
+  console opens with the index already filled in — press Create and wait a minute or two.
+- **From the repo.** [`firestore.indexes.json`](firestore.indexes.json) is the same index written
+  down. With the Firebase CLI: `firebase deploy --only firestore:indexes`.
 
 ### A note on secrets
 
@@ -84,6 +100,13 @@ have added your own.
   back from its Cloudinary URL, which confirms the whole path on the device. 11 more JVM unit
   tests over the listing form rules.
 
+- **Day 6** — The marketplace is real. The Home Feed lists every available listing newest first,
+  with the photo loaded back from Cloudinary; tapping a card opens Item Detail, which shows the
+  full listing alongside the seller's live profile; and the "Chat on WhatsApp" button opens
+  WhatsApp with a message already naming the item. The core flow now runs end to end: sign up →
+  post an item → see it in the feed → open it → message the seller. 8 more JVM unit tests over
+  the deep-link construction.
+
 ### Planned
 
 | Layer | Scope |
@@ -108,7 +131,7 @@ submission.
 | # | Screen | What it holds |
 |---|---|---|
 | 1 | Login / Signup | Email + password; signup also collects name, branch, semester and WhatsApp number |
-| 2 | Home Feed | Search field, category chips, listing cards (photo, title, price, seller branch) |
+| 2 | Home Feed | Listing cards (photo, title, price, seller and branch); search field and category chips land on Day 7 |
 | 3 | Item Detail | Photo, description, price, condition, seller, and the "Chat on WhatsApp" button |
 | 4 | Post Item | Photo first, then title, description, category, price, condition |
 | 5 | My Listings | The user's own items with Edit / Mark sold / Delete on each card |
@@ -154,11 +177,12 @@ The back stack behaves the way an Android user expects:
 | Log out | Firebase session ended, whole stack cleared, back to Login |
 | Reopen the app while signed in | Opens on the Feed; Login is never shown |
 
-Until Days 6–8 build them, the remaining sketch destinations (Feed, Item Detail, My items,
-Profile) render their Day 2 mockups under a banner naming the day the real screen arrives, so the
-shell can be walked through as a whole app in the meantime. Post Item was the first sketch
-replaced by a real screen, on Day 5. The Day 1 service check and the Day 2 mockup gallery are still reachable from a
-small **Dev tools** link at the bottom of the Login screen; both go away on Day 10.
+Until Days 7–8 build them, the remaining sketch destinations (My items and Profile) render their
+Day 2 mockups under a banner naming the day the real screen arrives, so the shell can be walked
+through as a whole app in the meantime. Post Item was the first sketch replaced by a real screen,
+on Day 5; the Feed and Item Detail followed on Day 6. The Day 1 service check and the Day 2
+mockup gallery are still reachable from a small **Dev tools** link at the bottom of the Login
+screen; both go away on Day 10.
 
 ---
 
@@ -233,6 +257,39 @@ worked — the whole path confirmed on the device instead of in two web consoles
 
 ---
 
+## Browsing and viewing a listing
+
+**The feed is one query, not one query plus N.** `status == available`, ordered by `createdAt`
+descending (FR-LIST-003). Sold items are filtered out by Firestore rather than in Kotlin, so a
+feed of twenty available items stays twenty document reads even once a semester of sold listings
+has piled up behind them. Everything a card draws — photo, title, price, seller name, branch —
+already lives on the listing document, which is what that costs (see *Data model* above).
+
+**A one-shot read rather than a live listener.** A `snapshots()` listener would keep the feed
+updating by itself, but it also holds a socket open for as long as the tab is on screen, and this
+feed changes a few times a day rather than a few times a minute. Two things close the gap: a
+Refresh action in the app bar, and a reload whenever the Feed tab is resumed — which is what makes
+"post an item, then tap Feed" show the listing that was just published, since the bottom bar keeps
+each tab's ViewModel alive across the trip.
+
+**Item Detail reads the seller live.** The listing already carries the seller's name and branch,
+but the detail screen re-reads their `users` document — for the WhatsApp number, which is
+deliberately *not* denormalised, and while it is there for the branch and semester too, so a
+seller who has since moved up a semester is not misreported. That read failing does not fail the
+screen: the listing is already loaded, so the page draws normally and only the contact button is
+disabled, with the reason under it.
+
+**Three states the screen has to tell apart.** A listing the seller has deleted is a normal thing
+to reach from a stale feed, so "this listing is gone" is its own state rather than an error — it
+is a different, far less alarming message than "something went wrong", and it offers the way back
+to the feed instead of a pointless retry.
+
+**Your own listing shows no WhatsApp button.** Messaging yourself is not something the screen
+should offer, so the green button is replaced by a "This is your listing" line rather than being
+disabled — there is nothing wrong for the user to fix. Edit / Mark sold / Delete arrive on Day 7.
+
+---
+
 ## Core mechanism: the WhatsApp deep link
 
 Rather than building a messaging backend, the "Chat on WhatsApp" button on Item Detail fires an
@@ -245,6 +302,22 @@ https://wa.me/91<sellerNumber>?text=<url-encoded message referencing the listing
 This satisfies the assignment objective around *sharing Android data among others* while
 sidestepping real-time messaging infrastructure entirely — and it lands buyers in the app they'd
 have moved to anyway.
+
+**The seller's number is never on screen.** It is read from the seller's `users` document when
+Item Detail loads and only ever spent on building the link at the moment the button is tapped, so
+it appears on no card, no feed row and no detail page (FR-CONTACT-003).
+
+**Three attempts, in descending order of directness.** WhatsApp by package name first, so the
+chat opens with no chooser; then WhatsApp Business, which a fair number of student sellers use;
+then whatever handles `https`, which is a browser landing on WhatsApp's own "continue to chat"
+page. That last fallback is what makes the button demonstrable on an emulator with no WhatsApp
+installed — otherwise it would be a dead control until the app was on a real phone. If all three
+fail, the screen says so rather than crashing.
+
+**Android 11 package visibility.** `setPackage("com.whatsapp")` silently fails to resolve unless
+the app declares what it is looking for, so `AndroidManifest.xml` carries a `<queries>` block
+naming both WhatsApp packages. Without it the button would report WhatsApp as missing on every
+modern phone — with WhatsApp sitting right there on the home screen.
 
 ---
 
@@ -260,13 +333,17 @@ and "Computer Engg" as three different branches. `whatsappNumber` is stored as t
 country code or separators, whatever the user typed.
 
 **`listings`** — `id`, `title`, `description`, `category`, `price`, `condition`, `photoUrl`,
-`sellerUid`, `sellerName`, `status`, `createdAt`
+`sellerUid`, `sellerName`, `sellerBranch`, `status`, `createdAt`
 
 `category` and `condition` come from closed lists for the same reason branch does — the feed
 filters by category from Day 7, and a filter cannot work against values a hundred students typed
 by hand. That list is also exactly what ML Kit's labels have to be mapped onto on Day 9.
-`sellerName` is denormalised from the seller's `users` document so the feed can draw a card
-without a second read per listing. `createdAt` is written by Firestore's own `@ServerTimestamp`
+`sellerName` and `sellerBranch` are denormalised from the seller's `users` document so the feed
+can draw a card without a second read per listing — a twenty-item feed would otherwise be
+twenty-one queries. `sellerBranch` is the one field here that PRD Section 8 does not list: Section
+9 specifies the feed card as *photo, title, price, seller branch*, and branch lives on the `users`
+document, so it is copied across at publish time. Listings written before Day 6 carry an empty
+branch and the card simply omits it. `createdAt` is written by Firestore's own `@ServerTimestamp`
 rather than by the phone, because the feed is ordered by it and a device with a wrong clock would
 otherwise pin its listings to the top of everyone's feed — or bury them.
 
@@ -283,8 +360,9 @@ app/src/main/java/com/example/campuskart/
 │   ├── AuthRepository.kt    # signup, login, logout, and the users document
 │   ├── UserProfile.kt       # the users collection schema (PRD Section 8)
 │   ├── Listing.kt           # the listings collection schema (PRD Section 8)
-│   ├── ListingRepository.kt # writing and (from Day 6) reading listings
+│   ├── ListingRepository.kt # writing and reading listings
 │   ├── ListingPhoto.kt      # compression, EXIF rotation, camera output files
+│   ├── WhatsAppContact.kt   # the wa.me link and the handoff to WhatsApp
 │   └── CloudinaryUploader.kt # the unsigned multipart upload
 ├── model/
 │   └── CampusOptions.kt     # the fixed branch, semester, category and condition lists
@@ -294,9 +372,11 @@ app/src/main/java/com/example/campuskart/
 └── ui/
     ├── auth/                # Login and Signup screens, their ViewModels, and form rules
     ├── post/                # Post Item screen, its ViewModel, and the listing form rules
+    ├── feed/                # Home Feed screen and its ViewModel
+    ├── detail/              # Item Detail screen, its ViewModel, and the WhatsApp button
     ├── components/          # small composables shared across screens
     ├── navigation/          # routes, the bottom bar, and the NavHost
-    ├── screens/             # temporary: sketch-backed placeholders for Days 5–8
+    ├── screens/             # temporary: sketch-backed placeholders for Days 7–8
     ├── mockups/             # temporary: Day 2 sketches of all six screens
     └── theme/               # Material3 theme — fixed green-teal palette
 ```
@@ -319,6 +399,38 @@ server the project doesn't have and can't pay for. CampusKart therefore uses an 
 preset, which means someone who decompiled the app could upload images to the account. For a
 free, serverless class project that was judged the right trade; a production app would put a
 small signing endpoint in front of it.
+
+**Firestore will not order a filtered query without being asked first.** The feed query is
+"available listings, newest first" — an equality filter on `status` plus an ordering on
+`createdAt` — which looks like the most ordinary query in the app and is the one that failed. A
+single-field index is created automatically; combining a filter on one field with an ordering on
+*another* needs a composite index, and Firestore will not invent one. It fails the query with
+`FAILED_PRECONDITION` and puts a ready-made console link in Logcat — which is helpful to a
+developer watching Logcat and invisible to everyone else, so the app translates that one error
+code into on-screen instructions rather than a generic "something went wrong". The index is also
+committed as [`firestore.indexes.json`](firestore.indexes.json) so it is a file in the repo
+rather than a click someone has to remember on a fresh project.
+
+**Android 11 hides other apps, including the one the whole app depends on.** The
+"Chat on WhatsApp" button uses `setPackage("com.whatsapp")` so the chat opens directly instead of
+through a chooser. Since Android 11 an app cannot see what else is installed unless it declares
+what it is looking for, so that intent fails to resolve on any modern phone — with WhatsApp
+sitting right there on the home screen — until `<queries>` in the manifest names the package.
+The related trap is `resolveActivity`, the usual "is this app installed?" check: under package
+visibility it answers "no" for exactly the same reason, so a check that looks correct reports
+WhatsApp as missing. Starting the intent and catching `ActivityNotFoundException` is what
+actually works, and it is one call instead of two.
+
+**A denormalised field is a trade, not a shortcut.** The feed card shows the seller's branch, but
+branch lives on the `users` document while the card is drawn from a `listings` document. Reading
+the seller per card would turn a twenty-item feed into twenty-one queries, so branch is copied
+onto the listing at publish time alongside the name. The cost is that it is a *snapshot* — a
+student who later switches branch keeps the old one on listings already posted — and that
+listings written before the field existed carry an empty string, which the card has to handle by
+dropping the separator with it rather than rendering "Aarav Shah  ·". The seller's WhatsApp
+number deliberately did *not* get the same treatment: copying it onto every listing would put a
+phone number in a document the whole campus can read, so Item Detail pays for a second read
+instead.
 
 **Nesting Scaffolds double-counts everything.** Hosting the Day 2 sketches inside the Day 3
 navigation shell put a `Scaffold` inside a `Scaffold`, and both of them wanted to draw the same

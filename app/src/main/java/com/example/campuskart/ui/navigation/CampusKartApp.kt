@@ -23,10 +23,10 @@ import androidx.navigation.navArgument
 import com.example.campuskart.data.AuthRepository
 import com.example.campuskart.ui.auth.LoginRoute
 import com.example.campuskart.ui.auth.SignupRoute
+import com.example.campuskart.ui.detail.ItemDetailRoute
+import com.example.campuskart.ui.feed.HomeFeedRoute
 import com.example.campuskart.ui.mockups.MockupGallery
 import com.example.campuskart.ui.post.PostItemRoute
-import com.example.campuskart.ui.screens.FeedPlaceholder
-import com.example.campuskart.ui.screens.ItemDetailPlaceholder
 import com.example.campuskart.ui.screens.MyListingsPlaceholder
 import com.example.campuskart.ui.screens.ProfilePlaceholderRoute
 
@@ -39,9 +39,10 @@ import com.example.campuskart.ui.screens.ProfilePlaceholderRoute
  * one thing that does matter - Login and the feed being on the same stack, so signing out really
  * clears it - harder to read.
  *
- * Day 4 put Firebase Auth behind Login, Signup and Log out, and Day 5 replaced the Post tab's
- * sketch with the real screen. Feed, Item Detail, My items and Profile are still Day 2 sketches
- * until Days 6-8.
+ * Day 4 put Firebase Auth behind Login, Signup and Log out, Day 5 replaced the Post tab's sketch
+ * with the real screen, and Day 6 did the same for the Feed and Item Detail - so the core flow
+ * (post an item, see it listed, open it, message the seller) is real end to end. My items and
+ * Profile are still Day 2 sketches until Days 7-8.
  */
 @Composable
 fun CampusKartApp(modifier: Modifier = Modifier) {
@@ -105,8 +106,12 @@ fun CampusKartApp(modifier: Modifier = Modifier) {
             }
 
             composable(Routes.FEED) {
-                FeedPlaceholder(
-                    onOpenSampleItem = { navController.navigate(Routes.itemDetail("sample")) },
+                HomeFeedRoute(
+                    onOpenListing = { navController.navigate(Routes.itemDetail(it)) },
+                    // The empty feed's only call to action. switchTab rather than a plain
+                    // navigate, so it lands on the Post tab properly - with the bottom bar
+                    // showing Post as selected - instead of stacking Post on top of the Feed.
+                    onPostItem = { navController.switchTab(TopLevelDestination.POST) },
                 )
             }
 
@@ -125,11 +130,10 @@ fun CampusKartApp(modifier: Modifier = Modifier) {
                 arguments = listOf(
                     navArgument(Routes.ARG_LISTING_ID) { type = NavType.StringType },
                 ),
-            ) { entry ->
-                ItemDetailPlaceholder(
-                    listingId = entry.arguments?.getString(Routes.ARG_LISTING_ID).orEmpty(),
-                    onBack = { navController.popBackStack() },
-                )
+            ) {
+                // listingId is not read here: Navigation puts the route arguments into the
+                // destination's SavedStateHandle, and ItemDetailViewModel takes it from there.
+                ItemDetailRoute(onBack = { navController.popBackStack() })
             }
 
             // Scaffolding, removed on Day 10 with the packages it opens.

@@ -1,0 +1,27 @@
+{
+  "//": [
+    "The composite index the Home Feed query needs (Day 6).",
+    "",
+    "ListingRepository.availableListings() filters on `status` and orders by `createdAt`.",
+    "Firestore creates single-field indexes automatically, but an equality filter on one field",
+    "combined with an ordering on a different field can only be served by a composite index, and",
+    "that one has to be asked for. Until it exists the query fails with FAILED_PRECONDITION and",
+    "the feed shows an error rather than listings.",
+    "",
+    "The easy way to create it is the console link Firestore prints in Logcat alongside that",
+    "error - it arrives pre-filled. This file is the same index written down, so it is part of",
+    "the repo rather than a click someone has to remember, and so `firebase deploy --only",
+    "firestore:indexes` can recreate it against a fresh project. See README 'Setup'."
+  ],
+  "indexes": [
+    {
+      "collectionGroup": "listings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
