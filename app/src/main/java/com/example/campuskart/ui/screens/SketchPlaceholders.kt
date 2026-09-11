@@ -22,7 +22,6 @@ import com.example.campuskart.ui.auth.AccountViewModel
 import com.example.campuskart.ui.mockups.HomeFeedMockup
 import com.example.campuskart.ui.mockups.ItemDetailMockup
 import com.example.campuskart.ui.mockups.MyListingsMockup
-import com.example.campuskart.ui.mockups.PostItemMockup
 import com.example.campuskart.ui.mockups.ProfileMockup
 
 /**
@@ -33,7 +32,8 @@ import com.example.campuskart.ui.mockups.ProfileMockup
  * screen on the day the build plan reaches it.
  *
  * Nothing in here talks to Firebase or Cloudinary, and no control inside a sketch does anything.
- * This file, and the `ui/mockups` package it draws on, are deleted once Day 8 lands.
+ * This file, and the `ui/mockups` package it draws on, are deleted once Day 8 lands. Post Item
+ * was the first to go, on Day 5.
  */
 
 /** Strip pinned above a sketch so it is never mistaken for a finished screen. */
@@ -91,13 +91,6 @@ fun FeedPlaceholder(onOpenSampleItem: () -> Unit, modifier: Modifier = Modifier)
         action = { TextButton(onClick = onOpenSampleItem) { Text("Open item") } },
     ) {
         HomeFeedMockup(showTabBar = false)
-    }
-}
-
-@Composable
-fun PostItemPlaceholder(modifier: Modifier = Modifier) {
-    Sketch(buildDay = "Day 5", modifier = modifier) {
-        PostItemMockup(hasPhoto = false, showTabBar = false)
     }
 }
 

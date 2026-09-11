@@ -1,13 +1,11 @@
 package com.example.campuskart.ui.auth
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -16,7 +14,6 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -152,42 +149,5 @@ fun AuthSwitchPrompt(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         TextButton(onClick = onClick, enabled = enabled) { Text(action) }
-    }
-}
-
-/**
- * The banner that carries a whole-form failure: a rejected password, an email already in use, a
- * dead network. Per-field problems are reported in that field's own supporting text instead.
- *
- * It occupies no space when [message] is null, and animates in rather than appearing instantly,
- * because it is inserted above the submit button - a silent insertion would shift the button out
- * from under a finger that is already on its way down.
- */
-@Composable
-fun AuthErrorBanner(message: String?, modifier: Modifier = Modifier) {
-    // Held after the message clears, so the banner still has text to draw on the way out - the
-    // exit animation outlives the state that caused it.
-    var lastMessage by remember { mutableStateOf(message) }
-    if (message != null) lastMessage = message
-
-    AnimatedVisibility(visible = message != null, modifier = modifier) {
-        Surface(
-            color = MaterialTheme.colorScheme.errorContainer,
-            contentColor = MaterialTheme.colorScheme.onErrorContainer,
-            shape = MaterialTheme.shapes.medium,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(Icons.Default.Info, contentDescription = null)
-                Text(
-                    text = lastMessage.orEmpty(),
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(start = 12.dp),
-                )
-            }
-        }
     }
 }

@@ -28,6 +28,28 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!--
+            Lets the system camera app write a listing photo into this app's cache directory.
+
+            Android has blocked file:// URIs from crossing an app boundary since Android 7, so
+            "here is a file, put the photo in it" has to be a content:// URI backed by a provider.
+            It is not exported and grants no permissions by itself - each capture gets a one-shot
+            grant for one file, issued when the intent is launched (see ListingPhoto).
+
+            Note there is no CAMERA permission anywhere in this manifest, and that is deliberate:
+            the app asks another app to take the photo rather than driving the camera itself, and
+            Android only demands the permission of an app that declares it.
+        -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
 
 </manifest>

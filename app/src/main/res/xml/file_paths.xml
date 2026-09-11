@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    What the FileProvider in AndroidManifest.xml is allowed to share, and nothing else.
+
+    Exactly one directory: the cache subfolder ListingPhoto writes camera captures into. The
+    camera app needs write access to a file inside it; no other app ever needs to see anything
+    else the app stores, so nothing else is listed here.
+
+    The `path` must match ListingPhoto.CAMERA_DIR.
+-->
+<paths>
+    <cache-path name="listing_photos" path="listing-photos/" />
+</paths>

@@ -37,6 +37,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.campuskart.model.CampusOptions
+import com.example.campuskart.ui.components.FormErrorBanner
 import com.example.campuskart.ui.theme.CampusKartTheme
 
 /**
@@ -180,7 +181,7 @@ fun SignupScreen(
                 enabled = enabled,
             )
 
-            AuthErrorBanner(message = state.formError, modifier = Modifier.padding(top = 4.dp))
+            FormErrorBanner(message = state.formError, modifier = Modifier.padding(top = 4.dp))
 
             Spacer(Modifier.height(4.dp))
 

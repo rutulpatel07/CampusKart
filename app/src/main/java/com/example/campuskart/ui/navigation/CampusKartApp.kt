@@ -24,10 +24,10 @@ import com.example.campuskart.data.AuthRepository
 import com.example.campuskart.ui.auth.LoginRoute
 import com.example.campuskart.ui.auth.SignupRoute
 import com.example.campuskart.ui.mockups.MockupGallery
+import com.example.campuskart.ui.post.PostItemRoute
 import com.example.campuskart.ui.screens.FeedPlaceholder
 import com.example.campuskart.ui.screens.ItemDetailPlaceholder
 import com.example.campuskart.ui.screens.MyListingsPlaceholder
-import com.example.campuskart.ui.screens.PostItemPlaceholder
 import com.example.campuskart.ui.screens.ProfilePlaceholderRoute
 
 /**
@@ -39,8 +39,9 @@ import com.example.campuskart.ui.screens.ProfilePlaceholderRoute
  * one thing that does matter - Login and the feed being on the same stack, so signing out really
  * clears it - harder to read.
  *
- * Day 4 put Firebase Auth behind Login, Signup and Log out; the four tabs still show their Day 2
- * sketches, and the real screens land on Days 5-8.
+ * Day 4 put Firebase Auth behind Login, Signup and Log out, and Day 5 replaced the Post tab's
+ * sketch with the real screen. Feed, Item Detail, My items and Profile are still Day 2 sketches
+ * until Days 6-8.
  */
 @Composable
 fun CampusKartApp(modifier: Modifier = Modifier) {
@@ -109,7 +110,7 @@ fun CampusKartApp(modifier: Modifier = Modifier) {
                 )
             }
 
-            composable(Routes.POST) { PostItemPlaceholder() }
+            composable(Routes.POST) { PostItemRoute() }
 
             composable(Routes.MY_LISTINGS) { MyListingsPlaceholder() }
 

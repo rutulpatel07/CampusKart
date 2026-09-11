@@ -31,6 +31,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.campuskart.ui.components.FormErrorBanner
 import com.example.campuskart.ui.theme.CampusKartTheme
 
 /**
@@ -103,7 +104,7 @@ fun LoginScreen(
         )
 
         // Whole-form failures - a wrong password, no network - rather than one bad field.
-        AuthErrorBanner(
+        FormErrorBanner(
             message = state.formError,
             modifier = Modifier.padding(top = 16.dp),
         )
