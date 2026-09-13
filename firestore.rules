@@ -1,0 +1,38 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // A profile supplies the seller's WhatsApp number when a buyer opens Item Detail, so an
+    // authenticated buyer may read it. The app never renders that number in the feed or detail.
+    match /users/{userId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+                    && userId == request.auth.uid
+                    && request.resource.data.uid == request.auth.uid;
+      allow update: if signedIn()
+                    && userId == request.auth.uid
+                    && request.resource.data.uid == resource.data.uid;
+      allow delete: if signedIn() && userId == request.auth.uid;
+    }
+
+    match /listings/{listingId} {
+      // CampusKart is a signed-in campus marketplace; anonymous clients cannot enumerate it.
+      allow read: if signedIn();
+
+      // The client may choose listing content, but never the account recorded as its seller.
+      allow create: if signedIn()
+                    && request.resource.data.sellerUid == request.auth.uid;
+
+      // Ownership must hold before and after an update so an owner cannot transfer a listing,
+      // and a different signed-in user cannot edit, mark sold, or take it over.
+      allow update: if signedIn()
+                    && resource.data.sellerUid == request.auth.uid
+                    && request.resource.data.sellerUid == resource.data.sellerUid;
+      allow delete: if signedIn() && resource.data.sellerUid == request.auth.uid;
+    }
+  }
+}

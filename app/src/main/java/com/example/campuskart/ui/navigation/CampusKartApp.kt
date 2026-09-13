@@ -29,7 +29,7 @@ import com.example.campuskart.ui.mockups.MockupGallery
 import com.example.campuskart.ui.mylistings.EditListingRoute
 import com.example.campuskart.ui.mylistings.MyListingsRoute
 import com.example.campuskart.ui.post.PostItemRoute
-import com.example.campuskart.ui.screens.ProfilePlaceholderRoute
+import com.example.campuskart.ui.profile.ProfileRoute
 
 /**
  * The whole app: one navigation graph, plus the bottom bar that appears on the four top-level
@@ -42,8 +42,7 @@ import com.example.campuskart.ui.screens.ProfilePlaceholderRoute
  *
  * Day 4 put Firebase Auth behind Login, Signup and Log out, Day 5 replaced the Post tab's sketch
  * with the real screen, Day 6 did the same for the Feed and Item Detail, and Day 7 for My items -
- * which also brought Edit Listing, the eighth destination. Profile is the last Day 2 sketch
- * standing, until Day 8.
+ * which also brought Edit Listing, the eighth destination. Day 8 completes the Profile tab.
  */
 @Composable
 fun CampusKartApp(modifier: Modifier = Modifier) {
@@ -129,9 +128,7 @@ fun CampusKartApp(modifier: Modifier = Modifier) {
             }
 
             composable(Routes.PROFILE) {
-                // The route clears the Firebase session itself (FR-AUTH-005); this only has to
-                // deal with the back stack afterwards.
-                ProfilePlaceholderRoute(onLoggedOut = { navController.signOut() })
+                ProfileRoute(onLoggedOut = { navController.signOut() })
             }
 
             composable(

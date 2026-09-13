@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.campuskart.data.AuthRepository
 import com.example.campuskart.data.UserProfile
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 /** The signed-in user, as far as the app has managed to load them. */
@@ -41,6 +42,10 @@ class AccountViewModel : ViewModel() {
         viewModelScope.launch {
             uiState = try {
                 uiState.copy(loading = false, profile = AuthRepository.profile())
+            } catch (e: CancellationException) {
+                // Leaving the screen cancels its ViewModel scope. That is not a failed profile
+                // read and must keep propagating instead of producing a stale error state.
+                throw e
             } catch (e: Exception) {
                 uiState.copy(loading = false, error = "Could not load your profile: ${e.message}")
             }

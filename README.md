@@ -45,14 +45,36 @@ instructions are in **[SETUP.md](SETUP.md)** — roughly 20 minutes, no credit c
 
 The short version:
 
-1. Create a Firebase project, enable **Email/Password** auth and **Cloud Firestore** (test mode).
+1. Create a Firebase project, enable **Email/Password** auth and **Cloud Firestore** (test mode
+   is fine while setting up).
 2. Register an Android app with package name `com.example.campuskart`, download
    `google-services.json`, and put it at `app/google-services.json`.
 3. Create a Cloudinary account and an **unsigned** upload preset.
 4. Fill in `cloudinary.cloudName` and `cloudinary.uploadPreset` at the bottom of
    `local.properties`.
 5. Sync Gradle and run. The temporary setup screen should show five green PASS rows.
-6. **Create the two Firestore indexes** (once, after the first listing exists) — see below.
+6. **Deploy the Firestore rules and indexes** before sharing the app beyond your own test
+   account — see below.
+
+### Deploy Firestore rules and indexes
+
+The committed [`firestore.rules`](firestore.rules) makes the marketplace private to signed-in
+students, allows a listing to be created only under the current account's UID, and permits only
+that seller to edit, mark sold, or delete it. It also permits authenticated buyers to read a
+seller profile only so Item Detail can construct the private WhatsApp handoff.
+
+Install and authenticate the Firebase CLI once, then deploy both committed files against your
+Firebase project (replace `YOUR_PROJECT_ID` with its **Project ID**, not its display name):
+
+```powershell
+npm install -g firebase-tools
+firebase login
+firebase deploy --only firestore --project YOUR_PROJECT_ID
+```
+
+The deploy uses [`firebase.json`](firebase.json), which points to both the rules and index
+definitions. It replaces Firestore's temporary test-mode rules, so do this only after Email /
+Password signup has been enabled and you have tested with a real signed-in account.
 
 ### Firestore needs two composite indexes
 
@@ -124,6 +146,12 @@ have added your own.
   be undone; deleting asks first. Editing reuses the Post Item form and its rules on a screen
   of its own. The Home Feed gained a search box and a row of category chips, both filtering
   instantly over what is already loaded. 14 more JVM unit tests over the filter rules.
+
+- **Day 8** — The real Profile tab now shows the signed-in student's name, email, branch,
+  semester, and WhatsApp number, with logout in its permanent location. Firestore rules are
+  versioned in the repository and ready to deploy, locking listing changes to their original
+  seller. Feed, detail, and My Listings already include loading, empty, and retry states; photo
+  uploads are capped at a 1600 px longest edge and JPEG quality 80 before Cloudinary upload.
 
 ### Planned
 
@@ -197,12 +225,10 @@ The back stack behaves the way an Android user expects:
 | Log out | Firebase session ended, whole stack cleared, back to Login |
 | Reopen the app while signed in | Opens on the Feed; Login is never shown |
 
-Profile is the last destination still rendering its Day 2 mockup, under a banner naming the day
-the real screen arrives, so the shell can be walked through as a whole app in the meantime. Post
-Item was the first sketch replaced by a real screen, on Day 5; the Feed and Item Detail followed
-on Day 6, and My items on Day 7. The Day 1 service check and the Day 2 mockup gallery are still
-reachable from a small **Dev tools** link at the bottom of the Login screen; both go away on
-Day 10.
+Post Item was the first Day 2 sketch replaced by a real screen, on Day 5; the Feed and Item
+Detail followed on Day 6, My items on Day 7, and Profile on Day 8. The Day 1 service check and
+the Day 2 mockup gallery are still reachable from a small **Dev tools** link at the bottom of the
+Login screen; both go away on Day 10.
 
 ---
 
@@ -463,7 +489,7 @@ app/src/main/java/com/example/campuskart/
     ├── mylistings/          # My Listings and Edit Listing, with their ViewModels
     ├── components/          # small composables shared across screens
     ├── navigation/          # routes, the bottom bar, and the NavHost
-    ├── screens/             # temporary: the sketch-backed Profile placeholder
+    ├── profile/             # real profile screen and logout
     ├── mockups/             # temporary: Day 2 sketches of all six screens
     └── theme/               # Material3 theme — fixed green-teal palette
 ```
