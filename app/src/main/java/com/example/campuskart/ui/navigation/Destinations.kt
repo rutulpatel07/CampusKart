@@ -11,9 +11,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
  * Every destination in the app, as plain string routes.
  *
  * Navigation Compose also supports type-safe routes built from `@Serializable` classes. This
- * project stays on string routes on purpose: there are seven destinations and exactly one
- * argument between them, so the type-safe version would add the kotlinx-serialization plugin to
- * the build for no practical gain.
+ * project stays on string routes on purpose: there are eight destinations and one argument
+ * between them, so the type-safe version would add the kotlinx-serialization plugin to the build
+ * for no practical gain.
  */
 object Routes {
     const val LOGIN = "login"
@@ -26,9 +26,20 @@ object Routes {
 
     /** Item Detail is pushed over the feed, so it carries the id of the listing to show. */
     const val ITEM_DETAIL = "item_detail/{listingId}"
+
+    /** Edit Listing is pushed over My Listings, and carries the id the same way. */
+    const val EDIT_LISTING = "edit_listing/{listingId}"
+
+    /**
+     * Shared by both routes above. They never appear together, and both ViewModels read the id
+     * out of their own destination's SavedStateHandle - so one name is enough, and two would
+     * only be two things to keep in step.
+     */
     const val ARG_LISTING_ID = "listingId"
 
     fun itemDetail(listingId: String) = "item_detail/$listingId"
+
+    fun editListing(listingId: String) = "edit_listing/$listingId"
 
     /** Temporary (Days 1-2 scaffolding): the mockup gallery and the service connectivity check. */
     const val DEV_TOOLS = "dev_tools"

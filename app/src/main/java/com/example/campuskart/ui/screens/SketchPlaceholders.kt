@@ -19,20 +19,19 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.campuskart.ui.auth.AccountUiState
 import com.example.campuskart.ui.auth.AccountViewModel
-import com.example.campuskart.ui.mockups.MyListingsMockup
 import com.example.campuskart.ui.mockups.ProfileMockup
 
 /**
  * TEMPORARY (Day 3). The navigation graph needs something behind every destination, and only
- * Login and Signup are real screens so far. Rather than leaving four blank "coming soon" pages,
- * each remaining destination renders its Day 2 mockup under a banner saying so - the shell can
- * then be reviewed and demoed as a whole app from today, and each sketch is swapped for the real
- * screen on the day the build plan reaches it.
+ * Login and Signup were real screens when this was written. Rather than leaving four blank
+ * "coming soon" pages, each remaining destination rendered its Day 2 mockup under a banner
+ * saying so - the shell could then be reviewed and demoed as a whole app, and each sketch was
+ * swapped for the real screen on the day the build plan reached it. Profile is the last one.
  *
  * Nothing in here talks to Firebase or Cloudinary, and no control inside a sketch does anything.
  * This file, and the `ui/mockups` package it draws on, are deleted once Day 8 lands. Post Item
- * was the first to go, on Day 5; the Feed and Item Detail followed on Day 6. What is left is My
- * items (Day 7) and Profile (Day 8).
+ * was the first to go, on Day 5; the Feed and Item Detail followed on Day 6, and My items on
+ * Day 7. Profile is the last one left.
  */
 
 /** Strip pinned above a sketch so it is never mistaken for a finished screen. */
@@ -75,11 +74,6 @@ private fun Sketch(
         SketchBanner(buildDay = buildDay, action = action)
         content()
     }
-}
-
-@Composable
-fun MyListingsPlaceholder(modifier: Modifier = Modifier) {
-    Sketch(buildDay = "Day 7", modifier = modifier) { MyListingsMockup(showTabBar = false) }
 }
 
 /**

@@ -26,8 +26,9 @@ import com.example.campuskart.ui.auth.SignupRoute
 import com.example.campuskart.ui.detail.ItemDetailRoute
 import com.example.campuskart.ui.feed.HomeFeedRoute
 import com.example.campuskart.ui.mockups.MockupGallery
+import com.example.campuskart.ui.mylistings.EditListingRoute
+import com.example.campuskart.ui.mylistings.MyListingsRoute
 import com.example.campuskart.ui.post.PostItemRoute
-import com.example.campuskart.ui.screens.MyListingsPlaceholder
 import com.example.campuskart.ui.screens.ProfilePlaceholderRoute
 
 /**
@@ -40,9 +41,9 @@ import com.example.campuskart.ui.screens.ProfilePlaceholderRoute
  * clears it - harder to read.
  *
  * Day 4 put Firebase Auth behind Login, Signup and Log out, Day 5 replaced the Post tab's sketch
- * with the real screen, and Day 6 did the same for the Feed and Item Detail - so the core flow
- * (post an item, see it listed, open it, message the seller) is real end to end. My items and
- * Profile are still Day 2 sketches until Days 7-8.
+ * with the real screen, Day 6 did the same for the Feed and Item Detail, and Day 7 for My items -
+ * which also brought Edit Listing, the eighth destination. Profile is the last Day 2 sketch
+ * standing, until Day 8.
  */
 @Composable
 fun CampusKartApp(modifier: Modifier = Modifier) {
@@ -117,7 +118,15 @@ fun CampusKartApp(modifier: Modifier = Modifier) {
 
             composable(Routes.POST) { PostItemRoute() }
 
-            composable(Routes.MY_LISTINGS) { MyListingsPlaceholder() }
+            composable(Routes.MY_LISTINGS) {
+                MyListingsRoute(
+                    // Item Detail is reached from here as well as from the Feed, so a seller can
+                    // see their own listing exactly as a buyer does.
+                    onOpenListing = { navController.navigate(Routes.itemDetail(it)) },
+                    onEdit = { navController.navigate(Routes.editListing(it)) },
+                    onPostItem = { navController.switchTab(TopLevelDestination.POST) },
+                )
+            }
 
             composable(Routes.PROFILE) {
                 // The route clears the Firebase session itself (FR-AUTH-005); this only has to
@@ -134,6 +143,18 @@ fun CampusKartApp(modifier: Modifier = Modifier) {
                 // listingId is not read here: Navigation puts the route arguments into the
                 // destination's SavedStateHandle, and ItemDetailViewModel takes it from there.
                 ItemDetailRoute(onBack = { navController.popBackStack() })
+            }
+
+            composable(
+                route = Routes.EDIT_LISTING,
+                arguments = listOf(
+                    navArgument(Routes.ARG_LISTING_ID) { type = NavType.StringType },
+                ),
+            ) {
+                // One callback for both leaving and finishing: a save pops back to My Listings,
+                // which is the same thing the back arrow does. The list reloads as it resumes,
+                // so the edited card is already updated when it appears.
+                EditListingRoute(onDone = { navController.popBackStack() })
             }
 
             // Scaffolding, removed on Day 10 with the packages it opens.

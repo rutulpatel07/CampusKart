@@ -52,22 +52,34 @@ The short version:
 4. Fill in `cloudinary.cloudName` and `cloudinary.uploadPreset` at the bottom of
    `local.properties`.
 5. Sync Gradle and run. The temporary setup screen should show five green PASS rows.
-6. **Create the feed's Firestore index** (once, after the first listing exists) — see below.
+6. **Create the two Firestore indexes** (once, after the first listing exists) — see below.
 
-### The Home Feed needs one Firestore index
+### Firestore needs two composite indexes
 
-The feed asks Firestore for *available listings, newest first*. That pairs an equality filter on
-`status` with an ordering on `createdAt`, and Firestore can only serve that combination from a
-**composite index** — which it does not create by itself. Until the index exists, the Feed tab
-shows "Firestore needs a one-time index for the feed" instead of listings.
+Two screens ask Firestore for a filtered list in date order:
 
-Two ways to create it, either is fine:
+| Screen | Query |
+|---|---|
+| Home Feed | `status == available`, newest first |
+| My Listings | `sellerUid == me`, newest first |
 
-- **From Logcat (easiest).** Open the Feed once, find the `FAILED_PRECONDITION` line from
+Each pairs an equality filter on one field with an ordering on *another*, and Firestore can only
+serve that combination from a **composite index** — which it does not create by itself. Until an
+index exists, that screen shows "Firestore needs a one-time index for this query" instead of
+listings.
+
+Two ways to create them, either is fine:
+
+- **From Logcat (easiest).** Open the screen once, find the `FAILED_PRECONDITION` line from
   Firestore in Logcat, and tap the `https://console.firebase.google.com/...` link in it. The
-  console opens with the index already filled in — press Create and wait a minute or two.
-- **From the repo.** [`firestore.indexes.json`](firestore.indexes.json) is the same index written
-  down. With the Firebase CLI: `firebase deploy --only firestore:indexes`.
+  console opens with the index already filled in — press Create and wait a minute or two. Repeat
+  for the other screen.
+- **From the repo.** [`firestore.indexes.json`](firestore.indexes.json) holds both indexes
+  written down. With the Firebase CLI: `firebase deploy --only firestore:indexes`, and neither
+  screen ever shows the error.
+
+The Home Feed's category filter and search need no index at all — they narrow a list already in
+memory rather than re-querying, so Firestore never sees them.
 
 ### A note on secrets
 
@@ -107,12 +119,18 @@ have added your own.
   post an item → see it in the feed → open it → message the seller. 8 more JVM unit tests over
   the deep-link construction.
 
+- **Day 7** — Layer 2 lands. My Listings shows everything the signed-in user has posted, with
+  Edit, Mark sold and Delete on each card; marking an item sold takes it off the feed and can
+  be undone; deleting asks first. Editing reuses the Post Item form and its rules on a screen
+  of its own. The Home Feed gained a search box and a row of category chips, both filtering
+  instantly over what is already loaded. 14 more JVM unit tests over the filter rules.
+
 ### Planned
 
 | Layer | Scope |
 |---|---|
-| Layer 1 — MVP | Auth → Post Item → Feed → Detail → WhatsApp deep link |
-| Layer 2 | Category filters, keyword search, mark-as-sold, My Listings |
+| Layer 1 — MVP | Auth → Post Item → Feed → Detail → WhatsApp deep link *(shipped Days 4–6)* |
+| Layer 2 | Category filters, keyword search, mark-as-sold, My Listings *(shipped Day 7)* |
 | Layer 2.5 — AI | ML Kit on-device image labeling suggests a listing's category from its photo |
 | Layer 3 — Polish | Image compression, empty states, loading indicators, dark mode |
 
@@ -131,7 +149,7 @@ submission.
 | # | Screen | What it holds |
 |---|---|---|
 | 1 | Login / Signup | Email + password; signup also collects name, branch, semester and WhatsApp number |
-| 2 | Home Feed | Listing cards (photo, title, price, seller and branch); search field and category chips land on Day 7 |
+| 2 | Home Feed | Search field, category chips, then listing cards (photo, title, price, seller and branch) |
 | 3 | Item Detail | Photo, description, price, condition, seller, and the "Chat on WhatsApp" button |
 | 4 | Post Item | Photo first, then title, description, category, price, condition |
 | 5 | My Listings | The user's own items with Edit / Mark sold / Delete on each card |
@@ -157,15 +175,16 @@ variant instead.
 
 ## Navigation
 
-One flat navigation graph holds all seven destinations — Login, Signup, the four tabs, and Item
-Detail. Nesting it into separate "auth" and "main" sub-graphs would buy separate back stacks the
-app has no use for, and would obscure the one thing that does matter: Login and the Feed sharing
-a stack, so that signing in really removes the login form and signing out really clears the
-session.
+One flat navigation graph holds all eight destinations — Login, Signup, the four tabs, Item
+Detail and Edit Listing. Nesting it into separate "auth" and "main" sub-graphs would buy
+separate back stacks the app has no use for, and would obscure the one thing that does matter:
+Login and the Feed sharing a stack, so that signing in really removes the login form and signing
+out really clears the session.
 
 Routes are plain strings rather than Navigation Compose's type-safe `@Serializable` routes. With
-seven destinations and exactly one argument between them (`listingId`, on Item Detail), the
-type-safe form would add the kotlinx-serialization plugin to the build for no practical gain.
+eight destinations and one argument between them — `listingId`, shared by Item Detail and Edit
+Listing, which never appear together — the type-safe form would add the kotlinx-serialization
+plugin to the build for no practical gain.
 
 The back stack behaves the way an Android user expects:
 
@@ -173,16 +192,17 @@ The back stack behaves the way an Android user expects:
 |---|---|
 | Log in / create account | Feed, with the auth screens dropped — back exits the app |
 | Tap a tab | Pops back to the Feed rather than stacking tabs; each tab keeps its own state |
-| Open a listing | Pushed over the Feed, bottom bar hidden |
+| Open a listing | Pushed over the Feed (or over My items), bottom bar hidden |
+| Edit a listing | Pushed over My items; saving pops straight back, and the list reloads as it resumes |
 | Log out | Firebase session ended, whole stack cleared, back to Login |
 | Reopen the app while signed in | Opens on the Feed; Login is never shown |
 
-Until Days 7–8 build them, the remaining sketch destinations (My items and Profile) render their
-Day 2 mockups under a banner naming the day the real screen arrives, so the shell can be walked
-through as a whole app in the meantime. Post Item was the first sketch replaced by a real screen,
-on Day 5; the Feed and Item Detail followed on Day 6. The Day 1 service check and the Day 2
-mockup gallery are still reachable from a small **Dev tools** link at the bottom of the Login
-screen; both go away on Day 10.
+Profile is the last destination still rendering its Day 2 mockup, under a banner naming the day
+the real screen arrives, so the shell can be walked through as a whole app in the meantime. Post
+Item was the first sketch replaced by a real screen, on Day 5; the Feed and Item Detail followed
+on Day 6, and My items on Day 7. The Day 1 service check and the Day 2 mockup gallery are still
+reachable from a small **Dev tools** link at the bottom of the Login screen; both go away on
+Day 10.
 
 ---
 
@@ -286,7 +306,74 @@ to the feed instead of a pointless retry.
 
 **Your own listing shows no WhatsApp button.** Messaging yourself is not something the screen
 should offer, so the green button is replaced by a "This is your listing" line rather than being
-disabled — there is nothing wrong for the user to fix. Edit / Mark sold / Delete arrive on Day 7.
+disabled — there is nothing wrong for the user to fix. The line points at My items, which is
+where a listing is actually managed.
+
+---
+
+## Filtering and searching the feed
+
+**Both filters run on the device, over listings already loaded.** For search that is not a
+choice: Firestore has no full-text search of any kind, and the documented answer is to pay for a
+third-party search service such as Algolia (FR-LIST-005, and *Challenges faced* below). For the
+category chips it is a choice — filtering by category *could* be a real query, but making it one
+would mean a network round trip, a loading spinner and a document read per tap, on a list small
+enough to narrow instantly in memory. Doing both the same way also means tapping a chip while a
+search is typed behaves the obvious way, rather than one filter re-querying underneath the other.
+
+**Search matches every word, in any order, ignoring case.** A student looking for a drafter set
+types "drafter set", "set drafter" or "drafter  set" more or less at random, and a plain
+substring test would only match the first against a title of "Drafter set (mini)". Partial words
+match too, so "calc" finds "Casio calculator" — on a list this size, finding too much is a much
+smaller problem than finding nothing. The rules live in `ui/feed/FeedFilter.kt` with no Android
+imports, so they are covered by fourteen ordinary JVM unit tests.
+
+**"Nothing matched" is a different screen from "nothing posted".** They need opposite messages:
+"nobody has posted anything, be the first" is wrong, and slightly insulting, when there are
+thirty listings and the user simply mistyped a search term. The filtered-empty state offers
+*Clear filters* instead, and a "3 of 12 listings" line sits under the chips whenever anything is
+being narrowed — without it, a search that quietly hides half the feed looks identical to a feed
+that only ever had half as much in it.
+
+---
+
+## Managing your own listings
+
+**My Listings is `sellerUid == me`, and does not filter on status.** Unlike the feed it shows
+sold items too, sorted below the available ones — a seller needs to see what they have already
+sold, both to confirm it happened and to put one back up if the deal falls through. The
+available-first ordering is done in Kotlin rather than in the query, because sorting by status
+and then by date would need a third composite index for a list that is rarely more than a
+handful of rows.
+
+**Marking sold is one field write, and it is reversible.** `status` is the exact field the feed
+query filters on, so flipping it to `sold` takes the listing off the feed and flipping it back
+puts it on again (FR-LIST-008). Reversible on purpose: a deal that falls through should not cost
+the seller a re-upload of the photo. Deleting is the one action that cannot be undone — the
+Cloudinary image cannot be removed either, since that needs the API secret the app deliberately
+does not ship — so it is the one action that asks first.
+
+**Editing reuses Post Item's form, rules and error type rather than copying them.** They are
+imported from `ui.post`, which is what guarantees a title too short to post is also too short to
+edit down to: the two screens cannot drift apart, because there is only one set of rules. Save
+stays disabled until something actually changes, so an Edit tapped by mistake costs a back press
+rather than a pointless write. The photo is not editable — changing it would mean a second
+Cloudinary upload and an orphan the app cannot delete, so a seller who photographed the wrong
+thing deletes the listing and posts it again.
+
+**An owner-only write is checked twice, and only one of those checks counts.** The repository
+reads the listing back and compares `sellerUid` before writing. That is not security — anyone
+running their own code skips it — and Day 8's Firestore rules are what actually enforce
+ownership, on the server. The client check exists so the *honest* failure, a listing deleted
+from another device, reads as "that listing no longer exists" instead of arriving as a bare
+`PERMISSION_DENIED`.
+
+**After a write the row is updated in place, not re-queried.** Firestore completes a write only
+once the server has acknowledged it, so by the time the coroutine resumes the new state is known
+for certain — re-reading would cost a document read per listing and blank the screen to redraw
+rows that did not change. Refresh, and the reload whenever the screen comes back to the front,
+cover what that cannot: a change made on another device, and a save on the Edit screen, which is
+pushed over My items and so reloads it on the way back.
 
 ---
 
@@ -336,8 +423,7 @@ country code or separators, whatever the user typed.
 `sellerUid`, `sellerName`, `sellerBranch`, `status`, `createdAt`
 
 `category` and `condition` come from closed lists for the same reason branch does — the feed
-filters by category from Day 7, and a filter cannot work against values a hundred students typed
-by hand. That list is also exactly what ML Kit's labels have to be mapped onto on Day 9.
+filters by category, and a filter cannot work against values a hundred students typed by hand. That list is also exactly what ML Kit's labels have to be mapped onto on Day 9.
 `sellerName` and `sellerBranch` are denormalised from the seller's `users` document so the feed
 can draw a card without a second read per listing — a twenty-item feed would otherwise be
 twenty-one queries. `sellerBranch` is the one field here that PRD Section 8 does not list: Section
@@ -372,11 +458,12 @@ app/src/main/java/com/example/campuskart/
 └── ui/
     ├── auth/                # Login and Signup screens, their ViewModels, and form rules
     ├── post/                # Post Item screen, its ViewModel, and the listing form rules
-    ├── feed/                # Home Feed screen and its ViewModel
+    ├── feed/                # Home Feed screen, its ViewModel, and the search/category filter
     ├── detail/              # Item Detail screen, its ViewModel, and the WhatsApp button
+    ├── mylistings/          # My Listings and Edit Listing, with their ViewModels
     ├── components/          # small composables shared across screens
     ├── navigation/          # routes, the bottom bar, and the NavHost
-    ├── screens/             # temporary: sketch-backed placeholders for Days 7–8
+    ├── screens/             # temporary: the sketch-backed Profile placeholder
     ├── mockups/             # temporary: Day 2 sketches of all six screens
     └── theme/               # Material3 theme — fixed green-teal palette
 ```
@@ -410,6 +497,17 @@ developer watching Logcat and invisible to everyone else, so the app translates 
 code into on-screen instructions rather than a generic "something went wrong". The index is also
 committed as [`firestore.indexes.json`](firestore.indexes.json) so it is a file in the repo
 rather than a click someone has to remember on a fresh project.
+
+**Firestore cannot search text, at all.** FR-LIST-005 asks for a keyword search over listing
+titles, which in SQL is one `LIKE` and in Firestore is nothing: there is no substring operator,
+no case-insensitive comparison, and the official answer in Firebase's own documentation is to
+mirror the collection into a paid third-party search service such as Algolia. `>=`/`<` on a
+string does give prefix matching, but only from the first character — it finds "Casio" typed as
+"Cas" and never as "calc", and it cannot ignore case without storing a second lowercased copy
+of every title. So the search is done on the device, over the listings the feed has already
+downloaded. For a campus marketplace of tens to low hundreds of items that is the entire feed,
+so the limitation is invisible; it would not hold at ten thousand listings, where the right
+answer is the search service this project cannot pay for.
 
 **Android 11 hides other apps, including the one the whole app depends on.** The
 "Chat on WhatsApp" button uses `setPackage("com.whatsapp")` so the chat opens directly instead of

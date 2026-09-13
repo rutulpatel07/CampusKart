@@ -1,12 +1,18 @@
 {
   "//": [
-    "The composite index the Home Feed query needs (Day 6).",
+    "The two composite indexes CampusKart's listing queries need.",
     "",
-    "ListingRepository.availableListings() filters on `status` and orders by `createdAt`.",
+    "ListingRepository.availableListings() (Day 6, the Home Feed) filters on `status` and orders",
+    "by `createdAt`. ListingRepository.myListings() (Day 7, My Listings) filters on `sellerUid`",
+    "and orders by the same field.",
+    "",
     "Firestore creates single-field indexes automatically, but an equality filter on one field",
     "combined with an ordering on a different field can only be served by a composite index, and",
     "that one has to be asked for. Until it exists the query fails with FAILED_PRECONDITION and",
-    "the feed shows an error rather than listings.",
+    "the screen shows an error rather than listings.",
+    "",
+    "Note the Home Feed's category filter (FR-LIST-004) needs no index of its own: it narrows a",
+    "list already in memory rather than re-querying, so Firestore never sees it.",
     "",
     "The easy way to create it is the console link Firestore prints in Logcat alongside that",
     "error - it arrives pre-filled. This file is the same index written down, so it is part of",
@@ -19,6 +25,14 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "listings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "sellerUid", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     }

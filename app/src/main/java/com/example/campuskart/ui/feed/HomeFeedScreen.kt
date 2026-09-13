@@ -12,18 +12,24 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -34,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -41,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.campuskart.data.Listing
+import com.example.campuskart.model.ListingOptions
 import com.example.campuskart.ui.components.ListingImage
 import com.example.campuskart.ui.theme.CampusKartTheme
 
@@ -52,9 +60,9 @@ import com.example.campuskart.ui.theme.CampusKartTheme
  * because signup is open to anyone (PRD.md Section 6), so it is the only trust signal the feed
  * has to offer.
  *
- * Day 7 adds the search field and category chips above the list (FR-LIST-004/005). They are
- * deliberately absent rather than stubbed: a search box that does nothing when tapped is worse
- * than no search box, and the Day 2 mockup already shows where they will sit.
+ * Day 7 added the search field and the category chips above the list (FR-LIST-004/005). Both
+ * narrow what is already loaded rather than re-querying Firestore - see [FeedFilter] for why -
+ * so typing filters as fast as the letters arrive.
  *
  * The screen is a pure function of [HomeFeedUiState]; [HomeFeedRoute] owns the ViewModel.
  */
@@ -65,6 +73,9 @@ fun HomeFeedScreen(
     onOpenListing: (Listing) -> Unit,
     onRefresh: () -> Unit,
     onPostItem: () -> Unit,
+    onQueryChange: (String) -> Unit,
+    onCategoryChange: (String) -> Unit,
+    onClearFilters: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -102,51 +113,167 @@ fun HomeFeedScreen(
             )
         },
     ) { inner ->
-        Box(
+        Column(
             modifier = Modifier
                 .padding(inner)
                 .fillMaxSize(),
         ) {
-            when {
-                state.loading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
-
-                state.error != null -> FeedMessage(
-                    title = "Could not load the feed",
-                    detail = state.error,
-                    actionLabel = "Try again",
-                    actionIcon = Icons.Default.Refresh,
-                    onAction = onRefresh,
-                    modifier = Modifier.align(Alignment.Center),
+            // Hidden while the first load runs, when the read failed, and when nothing has been
+            // posted at all. In all three there is nothing to narrow, and a search box floating
+            // over a blank screen reads as a broken screen rather than an empty one.
+            if (!state.loading && state.error == null && !state.isEmpty) {
+                FeedFilters(
+                    query = state.query,
+                    category = state.category,
+                    matchCount = state.visible.size,
+                    totalCount = state.listings.size,
+                    filtering = state.filtering,
+                    onQueryChange = onQueryChange,
+                    onCategoryChange = onCategoryChange,
                 )
+            }
 
-                state.isEmpty -> FeedMessage(
-                    title = "No listings yet",
-                    detail = "Nobody has posted anything for sale. Be the first - it takes about " +
-                        "a minute.",
-                    actionLabel = "Post an item",
-                    actionIcon = Icons.Default.Add,
-                    onAction = onPostItem,
-                    modifier = Modifier.align(Alignment.Center),
-                )
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+            ) {
+                when {
+                    state.loading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
 
-                else -> LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    contentPadding = PaddingValues(
-                        start = 16.dp,
-                        end = 16.dp,
-                        top = 8.dp,
-                        bottom = 16.dp,
-                    ),
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    // Keyed by document id so that a refresh which reorders or removes rows
-                    // reuses the composables it already has, instead of rebuilding the list and
-                    // re-requesting every photo Coil has already cached.
-                    items(state.listings, key = Listing::id) { listing ->
-                        FeedCard(listing = listing, onClick = { onOpenListing(listing) })
+                    state.error != null -> FeedMessage(
+                        title = "Could not load the feed",
+                        detail = state.error,
+                        actionLabel = "Try again",
+                        actionIcon = Icons.Default.Refresh,
+                        onAction = onRefresh,
+                        modifier = Modifier.align(Alignment.Center),
+                    )
+
+                    state.isEmpty -> FeedMessage(
+                        title = "No listings yet",
+                        detail = "Nobody has posted anything for sale. Be the first - it takes about " +
+                            "a minute.",
+                        actionLabel = "Post an item",
+                        actionIcon = Icons.Default.Add,
+                        onAction = onPostItem,
+                        modifier = Modifier.align(Alignment.Center),
+                    )
+
+                    state.hasNoMatches -> FeedMessage(
+                        title = "No listings match",
+                        detail = "Nothing here fits that search or category. Try a shorter word, or " +
+                            "look in every category.",
+                        actionLabel = "Clear filters",
+                        actionIcon = Icons.Default.Clear,
+                        onAction = onClearFilters,
+                        modifier = Modifier.align(Alignment.Center),
+                    )
+
+                    else -> LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        contentPadding = PaddingValues(
+                            start = 16.dp,
+                            end = 16.dp,
+                            top = 8.dp,
+                            bottom = 16.dp,
+                        ),
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
+                        // Keyed by document id so that a refresh which reorders or removes rows
+                        // reuses the composables it already has, instead of rebuilding the list and
+                        // re-requesting every photo Coil has already cached.
+                        items(state.visible, key = Listing::id) { listing ->
+                            FeedCard(listing = listing, onClick = { onOpenListing(listing) })
+                        }
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * The search box and the category chips (FR-LIST-004/005).
+ *
+ * Both are pinned above the list rather than tucked behind an icon in the app bar, so neither
+ * has to be discovered - which matters in a two-minute demo more than the vertical space costs.
+ *
+ * The chip row scrolls horizontally because eight chips do not fit across a phone: a [LazyRow]
+ * rather than a wrapping FlowRow, so the filter bar stays one predictable height instead of
+ * growing a second line and shoving the feed down.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FeedFilters(
+    query: String,
+    category: String,
+    matchCount: Int,
+    totalCount: Int,
+    filtering: Boolean,
+    onQueryChange: (String) -> Unit,
+    onCategoryChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        OutlinedTextField(
+            value = query,
+            onValueChange = onQueryChange,
+            placeholder = { Text("Search by title") },
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+            trailingIcon = {
+                // Only present when there is something to clear. A permanent clear button on an
+                // empty field is one more thing to mis-tap on the way to the keyboard.
+                if (query.isNotEmpty()) {
+                    IconButton(onClick = { onQueryChange("") }) {
+                        Icon(Icons.Default.Clear, contentDescription = "Clear search")
+                    }
+                }
+            },
+            singleLine = true,
+            shape = RoundedCornerShape(28.dp),
+            // Search rather than Done, so the keyboard's action key reads as what it does - even
+            // though the list has already filtered by the time it could be pressed.
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+        )
+
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            // "All" is not a category - it is the absence of one - so it is written here rather
+            // than added to ListingOptions.CATEGORIES, which is also the list a listing is
+            // posted under and the set ML Kit's labels map onto on Day 9.
+            item {
+                FilterChip(
+                    selected = category == FeedFilter.ALL_CATEGORIES,
+                    onClick = { onCategoryChange(FeedFilter.ALL_CATEGORIES) },
+                    label = { Text("All") },
+                )
+            }
+            items(ListingOptions.CATEGORIES) { option ->
+                FilterChip(
+                    selected = option == category,
+                    onClick = { onCategoryChange(option) },
+                    label = { Text(option) },
+                )
+            }
+        }
+
+        // Shown only while something is actually being narrowed. Without it, a search that
+        // quietly hides half the feed looks identical to a feed that only ever had half as much
+        // in it - and the count is the fastest way to see the filter working at all.
+        if (filtering) {
+            Text(
+                text = "$matchCount of $totalCount listings",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 16.dp, bottom = 6.dp),
+            )
         }
     }
 }
@@ -271,6 +398,9 @@ fun HomeFeedRoute(
         onOpenListing = { onOpenListing(it.id) },
         onRefresh = viewModel::refresh,
         onPostItem = onPostItem,
+        onQueryChange = viewModel::setQuery,
+        onCategoryChange = viewModel::setCategory,
+        onClearFilters = viewModel::clearFilters,
         modifier = modifier,
     )
 }
@@ -284,6 +414,52 @@ private fun HomeFeedScreenPreview() {
             onOpenListing = {},
             onRefresh = {},
             onPostItem = {},
+            onQueryChange = {},
+            onCategoryChange = {},
+            onClearFilters = {},
+        )
+    }
+}
+
+/** A search and a category narrowing the same three rows down to one (FR-LIST-004/005). */
+@Preview(showBackground = true, widthDp = 400, heightDp = 800)
+@Composable
+private fun HomeFeedFilteredPreview() {
+    CampusKartTheme {
+        HomeFeedScreen(
+            state = HomeFeedUiState(
+                loading = false,
+                listings = PreviewListings,
+                query = "casio",
+                category = "Calculator",
+            ),
+            onOpenListing = {},
+            onRefresh = {},
+            onPostItem = {},
+            onQueryChange = {},
+            onCategoryChange = {},
+            onClearFilters = {},
+        )
+    }
+}
+
+/** Filters on, nothing matching - the state that must not read as "nobody has posted anything". */
+@Preview(showBackground = true, widthDp = 400, heightDp = 800)
+@Composable
+private fun HomeFeedNoMatchesPreview() {
+    CampusKartTheme {
+        HomeFeedScreen(
+            state = HomeFeedUiState(
+                loading = false,
+                listings = PreviewListings,
+                query = "hovercraft",
+            ),
+            onOpenListing = {},
+            onRefresh = {},
+            onPostItem = {},
+            onQueryChange = {},
+            onCategoryChange = {},
+            onClearFilters = {},
         )
     }
 }
@@ -297,6 +473,9 @@ private fun HomeFeedEmptyPreview() {
             onOpenListing = {},
             onRefresh = {},
             onPostItem = {},
+            onQueryChange = {},
+            onCategoryChange = {},
+            onClearFilters = {},
         )
     }
 }

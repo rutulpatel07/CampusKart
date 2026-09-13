@@ -284,8 +284,9 @@ private fun ContactBar(
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    // Edit / Mark as sold / Delete arrive on Day 7 (FR-LIST-007/008/009).
-                    text = "You will be able to edit or mark it sold from My items.",
+                    // There is nobody to message, so the space the WhatsApp button would take
+                    // points at where the listing is actually managed (FR-LIST-007/008/009).
+                    text = "Edit it, mark it sold or delete it from My items.",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,

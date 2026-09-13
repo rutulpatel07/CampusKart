@@ -8,8 +8,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -26,7 +24,6 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -45,7 +42,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -59,6 +55,7 @@ import com.example.campuskart.data.Listing
 import com.example.campuskart.data.ListingPhoto
 import com.example.campuskart.data.UserProfile
 import com.example.campuskart.model.ListingOptions
+import com.example.campuskart.ui.components.ChipGroup
 import com.example.campuskart.ui.components.FormErrorBanner
 import com.example.campuskart.ui.theme.CampusKartTheme
 
@@ -72,7 +69,7 @@ import com.example.campuskart.ui.theme.CampusKartTheme
  * The screen is a pure function of [PostItemUiState]; [PostItemRoute] below owns the ViewModel
  * and the two photo launchers.
  */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PostItemScreen(
     state: PostItemUiState,
@@ -298,48 +295,6 @@ private fun PhotoField(
     }
 }
 
-/** A labelled row of single-choice chips - used for both Category and Condition. */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun ChipGroup(
-    label: String,
-    options: List<String>,
-    selected: String,
-    error: String?,
-    enabled: Boolean,
-    onSelect: (String) -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.titleSmall,
-            color = if (error != null) MaterialTheme.colorScheme.error else Color.Unspecified,
-        )
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            options.forEach { option ->
-                FilterChip(
-                    selected = option == selected,
-                    // Re-tapping the selected chip clears it rather than doing nothing, so a
-                    // mis-tap can be undone without there being a "none" chip in the row.
-                    onClick = { onSelect(if (option == selected) "" else option) },
-                    enabled = enabled,
-                    label = { Text(option) },
-                )
-            }
-        }
-        error?.let {
-            Text(
-                text = it,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
-            )
-        }
-    }
-}
-
 /**
  * What replaces the form once the document exists in Firestore.
  *
@@ -426,8 +381,8 @@ private fun PublishedCard(
         }
 
         Text(
-            text = "It appears on the Feed and on My items from Day 6 - those screens are still " +
-                "Day 2 sketches today. The document is in Firestore now: listings/${listing.id}",
+            text = "It is on the Feed now, and on My items - where you can edit it, mark it sold " +
+                "or delete it. The document is in Firestore: listings/${listing.id}",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
