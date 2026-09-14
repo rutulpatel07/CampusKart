@@ -121,10 +121,6 @@ fun PostItemScreen(
                 onChoosePhoto = onChoosePhoto,
             )
 
-            // Day 9 drops the ML Kit suggestion banner in here, between the photo and the
-            // category chips, so the cause and the effect are visible at once. The slot is left
-            // empty rather than stubbed - a fake "Looks like..." row would be misleading now.
-
             OutlinedTextField(
                 value = form.title,
                 onValueChange = { onFormChange(form.copy(title = it)) },
@@ -150,6 +146,8 @@ fun PostItemScreen(
                 maxLines = 6,
                 modifier = Modifier.fillMaxWidth(),
             )
+
+            CategorySuggestionBanner(state = state.categorySuggestion)
 
             ChipGroup(
                 label = "Category",
@@ -226,6 +224,74 @@ fun PostItemScreen(
 
             Spacer(Modifier.height(16.dp))
         }
+    }
+}
+
+/** The non-blocking result of the one-shot ML Kit scan triggered by photo selection. */
+@Composable
+private fun CategorySuggestionBanner(state: CategorySuggestionState) {
+    when (state) {
+        CategorySuggestionState.Idle -> Unit
+
+        CategorySuggestionState.Analysing -> Surface(
+            color = MaterialTheme.colorScheme.secondaryContainer,
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Row(
+                modifier = Modifier.padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.size(10.dp))
+                Text("Suggesting a category from your photo...")
+            }
+        }
+
+        is CategorySuggestionState.Suggested -> Surface(
+            color = MaterialTheme.colorScheme.secondaryContainer,
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(Modifier.padding(12.dp)) {
+                Text(
+                    text = "AI suggestion: ${state.suggestion.category}",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = "Based on “${state.suggestion.sourceLabel}” " +
+                        "(${(state.suggestion.confidence * 100).toInt()}% confidence). " +
+                        "You can choose any category below.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                )
+            }
+        }
+
+        CategorySuggestionState.NoMatch -> SuggestionFallbackBanner(
+            "No confident category match. We selected Other; you can change it below.",
+        )
+
+        is CategorySuggestionState.Failed -> SuggestionFallbackBanner(
+            "${state.message} Other is selected; you can choose any category below.",
+        )
+    }
+}
+
+@Composable
+private fun SuggestionFallbackBanner(message: String) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(12.dp),
+        )
     }
 }
 

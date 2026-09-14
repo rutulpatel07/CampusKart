@@ -13,8 +13,11 @@ import com.example.campuskart.data.Listing
 import com.example.campuskart.data.ListingOutcome
 import com.example.campuskart.data.ListingPhoto
 import com.example.campuskart.data.ListingRepository
+import com.example.campuskart.data.CategorySuggestionOutcome
+import com.example.campuskart.data.MlKitCategorySuggester
 import com.example.campuskart.data.UploadOutcome
 import com.example.campuskart.data.UserProfile
+import com.example.campuskart.model.ListingOptions
 import kotlinx.coroutines.launch
 
 /**
@@ -27,6 +30,14 @@ enum class PublishStep(val label: String) {
     PREPARING("Preparing the photo..."),
     UPLOADING("Uploading the photo..."),
     SAVING("Saving the listing..."),
+}
+
+sealed interface CategorySuggestionState {
+    data object Idle : CategorySuggestionState
+    data object Analysing : CategorySuggestionState
+    data class Suggested(val suggestion: CategorySuggestion) : CategorySuggestionState
+    data object NoMatch : CategorySuggestionState
+    data class Failed(val message: String) : CategorySuggestionState
 }
 
 /** Everything the Post Item screen draws. */
@@ -46,6 +57,8 @@ data class PostItemUiState(
      */
     val seller: UserProfile? = null,
     val sellerError: String? = null,
+    /** Day 9's on-device hint. It never disables the form or blocks publishing. */
+    val categorySuggestion: CategorySuggestionState = CategorySuggestionState.Idle,
 ) {
     val publishing: Boolean get() = step != null
     val enabled: Boolean get() = !publishing
@@ -68,6 +81,9 @@ class PostItemViewModel(application: Application) : AndroidViewModel(application
 
     var uiState by mutableStateOf(PostItemUiState())
         private set
+
+    private var suggestionGeneration = 0
+    private var categoryChangedManually = false
 
     init {
         loadSeller()
@@ -103,6 +119,7 @@ class PostItemViewModel(application: Application) : AndroidViewModel(application
      */
     fun onFormChange(form: ListingForm) {
         val old = uiState.form
+        if (old.category != form.category) categoryChangedManually = true
         uiState = uiState.copy(
             form = form,
             errors = uiState.errors.copy(
@@ -126,13 +143,40 @@ class PostItemViewModel(application: Application) : AndroidViewModel(application
      */
     fun onPhotoPicked(uri: Uri?) {
         if (uri == null) return
+        val generation = ++suggestionGeneration
+        categoryChangedManually = false
         uiState = uiState.copy(
             photoUri = uri,
+            // FR-AI-004: a weak or unknown image still starts at a valid category.
+            form = uiState.form.copy(category = ListingOptions.FALLBACK_CATEGORY),
             errors = uiState.errors.copy(photo = null),
             formError = null,
+            categorySuggestion = CategorySuggestionState.Analysing,
         )
-        // Day 9 hooks in right here: the same URI goes to ML Kit's on-device labeler, and the
-        // suggested category is written into form.category (FR-AI-001/002).
+        viewModelScope.launch {
+            when (val outcome = MlKitCategorySuggester.suggest(getApplication(), uri)) {
+                is CategorySuggestionOutcome.Suggested -> {
+                    if (generation != suggestionGeneration) return@launch
+                    uiState = uiState.copy(
+                        // A category tapped while ML Kit was working always wins.
+                        form = if (categoryChangedManually) uiState.form else {
+                            uiState.form.copy(category = outcome.suggestion.category)
+                        },
+                        categorySuggestion = CategorySuggestionState.Suggested(outcome.suggestion),
+                    )
+                }
+
+                CategorySuggestionOutcome.NoMatch -> if (generation == suggestionGeneration) {
+                    uiState = uiState.copy(categorySuggestion = CategorySuggestionState.NoMatch)
+                }
+
+                is CategorySuggestionOutcome.Failure -> if (generation == suggestionGeneration) {
+                    uiState = uiState.copy(
+                        categorySuggestion = CategorySuggestionState.Failed(outcome.message),
+                    )
+                }
+            }
+        }
     }
 
     fun publish() {
@@ -205,6 +249,8 @@ class PostItemViewModel(application: Application) : AndroidViewModel(application
 
     /** "Post another item" - back to an empty form, keeping the profile already loaded. */
     fun startAnother() {
+        suggestionGeneration++
+        categoryChangedManually = false
         uiState = PostItemUiState(seller = uiState.seller)
     }
 }

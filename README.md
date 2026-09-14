@@ -33,7 +33,7 @@ where students already are — WhatsApp.
 | Image hosting | Cloudinary (free tier) |
 | Image loading | Coil 3 |
 | Photo capture | System photo picker + camera intent |
-| AI (planned) | Google ML Kit — on-device Image Labeling |
+| AI | Google ML Kit — on-device Image Labeling (bundled model) |
 | Min / target SDK | 26 (Android 8.0) / 37 |
 
 ---
@@ -153,13 +153,21 @@ have added your own.
   seller. Feed, detail, and My Listings already include loading, empty, and retry states; photo
   uploads are capped at a 1600 px longest edge and JPEG quality 80 before Cloudinary upload.
 
+- **Day 9** — On-device AI category suggestion. When a seller picks a photo on the Post Item
+  screen, Google ML Kit's bundled Image Labeling model scans it locally (no network needed) and
+  maps recognised labels to the app's fixed categories (Books, Calculator, Cycle, Lab Coat,
+  Drafter, Electronics). The suggestion pre-selects the category chips; the seller can override
+  it freely or ignore it. A 70% confidence threshold keeps weak guesses out, and unrecognised
+  images default to Other. The mapper and its tests are pure Kotlin with no Android imports. 3
+  more JVM unit tests over the label-to-category mapping.
+
 ### Planned
 
 | Layer | Scope |
 |---|---|
 | Layer 1 — MVP | Auth → Post Item → Feed → Detail → WhatsApp deep link *(shipped Days 4–6)* |
 | Layer 2 | Category filters, keyword search, mark-as-sold, My Listings *(shipped Day 7)* |
-| Layer 2.5 — AI | ML Kit on-device image labeling suggests a listing's category from its photo |
+| Layer 2.5 — AI | ML Kit on-device image labeling suggests a listing's category from its photo *(shipped Day 9)* |
 | Layer 3 — Polish | Image compression, empty states, loading indicators, dark mode |
 
 Full requirements are specified in [`PRD.md`](PRD.md) and [`SRS.md`](SRS.md); the day-by-day
@@ -475,7 +483,8 @@ app/src/main/java/com/example/campuskart/
 │   ├── ListingRepository.kt # writing and reading listings
 │   ├── ListingPhoto.kt      # compression, EXIF rotation, camera output files
 │   ├── WhatsAppContact.kt   # the wa.me link and the handoff to WhatsApp
-│   └── CloudinaryUploader.kt # the unsigned multipart upload
+│   ├── CloudinaryUploader.kt # the unsigned multipart upload
+│   └── MlKitCategorySuggester.kt # on-device image labeling for category hints
 ├── model/
 │   └── CampusOptions.kt     # the fixed branch, semester, category and condition lists
 ├── setup/                   # temporary: verifies Firebase + Cloudinary connectivity
@@ -635,3 +644,21 @@ the Kotlin 2.2 compiler bundled with AGP 9.3.1 cannot read — the build failed 
 `Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin` errors that pointed at
 this project's own source files rather than at the real culprit. Reading the dependency tree
 (`gradlew :app:dependencyInsight`) traced it to Coil, and pinning Coil to 3.4.0 resolved it.
+
+**ML Kit recognises objects, not campus items.** Google's default Image Labeling model has a
+vocabulary of 400+ labels trained on general-purpose photos. It reliably returns "book" for a
+textbook and "bicycle" for a cycle, but has no concept of a "drafter" or a "lab coat" as distinct
+from an ordinary coat or jacket. CampusKart bridges this with a hand-written mapping table
+(`CategorySuggestionMapper`) that maps broad ML Kit labels to the app's fixed categories — "coat"
+and "jacket" both map to Lab Coat, "ruler" and "compass" map to Drafter — and falls back to Other
+when no label clears the 70% confidence threshold. The mapping is necessarily lossy: a photo of a
+drafter set photographed at an angle might be labelled "tool" rather than "ruler", and a lab coat
+folded in a bag might not be recognised at all. The feature is presented as a convenience hint,
+not a classification — the seller always has full control over which category is selected, and
+posting is never blocked by a failed or missing suggestion.
+
+**Bundled model vs. Play Services model.** ML Kit offers two deployment modes. The Play Services
+variant adds only ~200 KB to the APK but downloads the model on first use, which means the
+suggestion silently does nothing the first time it is tried on a fresh device — bad for a live
+demo. The bundled variant adds ~5.7 MB to the APK but works immediately and offline. The bundled
+model was chosen because a reliable demo matters more than APK size for a college presentation.

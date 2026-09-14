@@ -20,6 +20,7 @@ camerax = "1.6.2"
 # Navigation Compose. 2.9.x is the last line built against a Kotlin the AGP 9.3.1 toolchain
 # reads without complaint - same constraint that pins Coil above.
 navigationCompose = "2.9.7"
+mlKitImageLabeling = "17.0.9"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -63,6 +64,9 @@ androidx-camera-view = { group = "androidx.camera", name = "camera-view", versio
 
 # The single navigation graph behind the bottom bar - see ui/navigation/.
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
+
+# Bundled rather than Play Services: the model is ready immediately and works offline for demos.
+mlkit-image-labeling = { group = "com.google.mlkit", name = "image-labeling", version.ref = "mlKitImageLabeling" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
