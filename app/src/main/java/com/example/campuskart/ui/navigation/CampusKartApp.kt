@@ -25,7 +25,6 @@ import com.example.campuskart.ui.auth.LoginRoute
 import com.example.campuskart.ui.auth.SignupRoute
 import com.example.campuskart.ui.detail.ItemDetailRoute
 import com.example.campuskart.ui.feed.HomeFeedRoute
-import com.example.campuskart.ui.mockups.MockupGallery
 import com.example.campuskart.ui.mylistings.EditListingRoute
 import com.example.campuskart.ui.mylistings.MyListingsRoute
 import com.example.campuskart.ui.post.PostItemRoute
@@ -40,9 +39,8 @@ import com.example.campuskart.ui.profile.ProfileRoute
  * one thing that does matter - Login and the feed being on the same stack, so signing out really
  * clears it - harder to read.
  *
- * Day 4 put Firebase Auth behind Login, Signup and Log out, Day 5 replaced the Post tab's sketch
- * with the real screen, Day 6 did the same for the Feed and Item Detail, and Day 7 for My items -
- * which also brought Edit Listing, the eighth destination. Day 8 completes the Profile tab.
+ * All eight destinations are real screens. Day 9 added ML Kit category suggestion to Post Item;
+ * Day 10 removed the scaffolding (mockup gallery and setup check).
  */
 @Composable
 fun CampusKartApp(modifier: Modifier = Modifier) {
@@ -81,10 +79,8 @@ fun CampusKartApp(modifier: Modifier = Modifier) {
         NavHost(
             navController = navController,
             startDestination = startDestination,
-            // consumeWindowInsets matters here: the mockup-backed placeholders each carry their
-            // own Scaffold and TopAppBar, and those add status-bar padding of their own unless
-            // they are told the outer Scaffold has already applied it. Without this the sketch
-            // screens sit a status bar's height too low.
+            // consumeWindowInsets: without this, nested Scaffolds inside tab destinations
+            // double-count the status bar inset.
             modifier = Modifier
                 .padding(inner)
                 .consumeWindowInsets(inner)
@@ -94,7 +90,6 @@ fun CampusKartApp(modifier: Modifier = Modifier) {
                 LoginRoute(
                     onSignedIn = { navController.enterApp() },
                     onCreateAccount = { navController.navigate(Routes.SIGNUP) },
-                    onOpenDevTools = { navController.navigate(Routes.DEV_TOOLS) },
                 )
             }
 
@@ -154,8 +149,6 @@ fun CampusKartApp(modifier: Modifier = Modifier) {
                 EditListingRoute(onDone = { navController.popBackStack() })
             }
 
-            // Scaffolding, removed on Day 10 with the packages it opens.
-            composable(Routes.DEV_TOOLS) { MockupGallery() }
         }
     }
 }

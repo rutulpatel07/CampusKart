@@ -41,8 +41,6 @@ object Routes {
 
     fun editListing(listingId: String) = "edit_listing/$listingId"
 
-    /** Temporary (Days 1-2 scaffolding): the mockup gallery and the service connectivity check. */
-    const val DEV_TOOLS = "dev_tools"
 }
 
 /**

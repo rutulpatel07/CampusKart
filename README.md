@@ -161,14 +161,19 @@ have added your own.
   images default to Other. The mapper and its tests are pure Kotlin with no Android imports. 3
   more JVM unit tests over the label-to-category mapping.
 
-### Planned
+- **Day 10** — Final polish. Removed the Day 1 service-check screen and Day 2 mockup gallery
+  (both were scaffolding that stayed accessible via a Dev tools link on the Login screen). Full
+  end-to-end regression pass, README finalised with demo script, and the codebase cleaned up for
+  submission.
 
-| Layer | Scope |
-|---|---|
-| Layer 1 — MVP | Auth → Post Item → Feed → Detail → WhatsApp deep link *(shipped Days 4–6)* |
-| Layer 2 | Category filters, keyword search, mark-as-sold, My Listings *(shipped Day 7)* |
-| Layer 2.5 — AI | ML Kit on-device image labeling suggests a listing's category from its photo *(shipped Day 9)* |
-| Layer 3 — Polish | Image compression, empty states, loading indicators, dark mode |
+### Layer summary
+
+| Layer | Scope | Status |
+|---|---|---|
+| Layer 1 — MVP | Auth → Post Item → Feed → Detail → WhatsApp deep link | Shipped (Days 4–6) |
+| Layer 2 | Category filters, keyword search, mark-as-sold, My Listings | Shipped (Day 7) |
+| Layer 2.5 — AI | ML Kit on-device image labeling suggests a listing's category from its photo | Shipped (Day 9) |
+| Layer 3 — Polish | Image compression, empty states, loading indicators, Firestore security rules, profile | Shipped (Day 8) |
 
 Full requirements are specified in [`PRD.md`](PRD.md) and [`SRS.md`](SRS.md); the day-by-day
 schedule is in [`BUILD_PLAN.md`](BUILD_PLAN.md).
@@ -178,9 +183,8 @@ schedule is in [`BUILD_PLAN.md`](BUILD_PLAN.md).
 ## Screen design
 
 All six screens were sketched in Compose before any of them was wired to Firebase, so the layout
-could be reviewed and changed while changing it was still cheap. The sketches live in
-`ui/mockups/` and are replaced screen by screen from Day 3; the package is deleted before
-submission.
+could be reviewed and changed while changing it was still cheap. The sketches were replaced
+screen by screen from Day 3 onwards, and the mockup package was removed on Day 10.
 
 | # | Screen | What it holds |
 |---|---|---|
@@ -235,8 +239,7 @@ The back stack behaves the way an Android user expects:
 
 Post Item was the first Day 2 sketch replaced by a real screen, on Day 5; the Feed and Item
 Detail followed on Day 6, My items on Day 7, and Profile on Day 8. The Day 1 service check and
-the Day 2 mockup gallery are still reachable from a small **Dev tools** link at the bottom of the
-Login screen; both go away on Day 10.
+the Day 2 mockup gallery were removed on Day 10.
 
 ---
 
@@ -487,9 +490,6 @@ app/src/main/java/com/example/campuskart/
 │   └── MlKitCategorySuggester.kt # on-device image labeling for category hints
 ├── model/
 │   └── CampusOptions.kt     # the fixed branch, semester, category and condition lists
-├── setup/                   # temporary: verifies Firebase + Cloudinary connectivity
-│   ├── SetupCheck.kt
-│   └── SetupStatusScreen.kt
 └── ui/
     ├── auth/                # Login and Signup screens, their ViewModels, and form rules
     ├── post/                # Post Item screen, its ViewModel, and the listing form rules
@@ -498,8 +498,7 @@ app/src/main/java/com/example/campuskart/
     ├── mylistings/          # My Listings and Edit Listing, with their ViewModels
     ├── components/          # small composables shared across screens
     ├── navigation/          # routes, the bottom bar, and the NavHost
-    ├── profile/             # real profile screen and logout
-    ├── mockups/             # temporary: Day 2 sketches of all six screens
+    ├── profile/             # profile screen and logout
     └── theme/               # Material3 theme — fixed green-teal palette
 ```
 
@@ -662,3 +661,64 @@ variant adds only ~200 KB to the APK but downloads the model on first use, which
 suggestion silently does nothing the first time it is tried on a fresh device — bad for a live
 demo. The bundled variant adds ~5.7 MB to the APK but works immediately and offline. The bundled
 model was chosen because a reliable demo matters more than APK size for a college presentation.
+
+**Open signup and the trust trade-off.** Any email can create an account — there is no college
+domain check and no email verification step. This is a deliberate choice: adding domain
+restriction would lock out students whose college uses personal Gmail addresses, and email
+verification adds a step that slows down a live demo. The trade-off is that a stranger could sign
+up and post irrelevant items. For a class project this was judged acceptable; a production version
+would add moderation or domain-based access control.
+
+---
+
+## Objectives
+
+Per the course assignment (2CEIT5PE18 — Mobile Application Development, Semester V):
+
+1. **Build a functional Android application** using Kotlin and Jetpack Compose that solves a real
+   problem for university students — buying and selling used academic items within a campus.
+2. **Demonstrate Firebase integration** — Authentication for user management and Cloud Firestore
+   for real-time data storage, with security rules enforcing ownership constraints.
+3. **Demonstrate sharing data between applications** — the WhatsApp deep link on Item Detail
+   uses Android implicit intents to hand off a conversation to WhatsApp, satisfying the
+   assignment's inter-app communication requirement.
+4. **Demonstrate on-device AI** — ML Kit Image Labeling runs a pretrained model on the phone to
+   suggest a listing's category from its photo, with no server call and no internet needed.
+5. **Maintain clean documentation and version history** — daily commits with clear messages,
+   and this README documenting features, objectives, tech stack, and challenges faced.
+
+---
+
+## Demo script
+
+A short walkthrough for the live presentation. Bring a real item (a book, a calculator, anything
+from the category list) to post during the demo.
+
+1. **Open the app.** It lands on the Feed. If signed in from testing, listings appear; if not,
+   the Login screen is shown.
+2. **Sign up or log in.** Create an account with a real name, branch, semester, WhatsApp number.
+   Show that the form validates each field before submission.
+3. **Post an item.** Tap the Post tab. Take a photo of the real item with the Camera button.
+   Point out the AI suggestion banner that appears — ML Kit scanned the photo on-device and
+   pre-selected a category. Change the category manually to show override works. Fill in the
+   title, description, price and condition. Tap Publish and watch the three-step progress
+   (Preparing → Uploading → Saving).
+4. **See it in the Feed.** Tap the Feed tab. The listing just posted appears at the top with its
+   Cloudinary-hosted photo. Use the search bar to find it by title. Tap a category chip to
+   filter.
+5. **Open Item Detail.** Tap the listing card. The full detail loads with the seller's live
+   profile. Tap "Chat on WhatsApp" — WhatsApp opens with a prefilled message naming the item.
+   Press back to return.
+6. **Manage the listing.** Tap My items. The listing appears with Edit, Mark sold, and Delete
+   actions. Mark it sold — it disappears from the Feed. Undo — it reappears. Edit the price,
+   save, confirm the change on the card.
+7. **Show the Profile tab.** Name, branch, semester, WhatsApp number, and the logout button.
+8. **Log out and back in.** Tap logout, confirm the Login screen appears, log back in, confirm
+   the Feed loads with the session restored.
+
+**Key points to mention during the demo:**
+- Photos are compressed before upload (1600 px, JPEG 80) to save mobile data
+- ML Kit runs entirely on-device — no internet needed for the category suggestion
+- WhatsApp number is never shown on screen — only used to build the deep link
+- Firestore security rules enforce that only the seller can edit or delete their own listings
+- The app works offline for browsing already-loaded listings; posting requires connectivity

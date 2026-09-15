@@ -19,7 +19,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
@@ -49,7 +48,6 @@ fun LoginScreen(
     onPasswordChange: (String) -> Unit,
     onSubmit: () -> Unit,
     onCreateAccount: () -> Unit,
-    onOpenDevTools: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -140,21 +138,7 @@ fun LoginScreen(
             enabled = !state.submitting,
         )
 
-        // A weight() spacer would push this to the bottom of the screen, but a weight inside a
-        // verticalScroll column measures against an infinite height and crashes. Fixed gap it is.
-        Spacer(Modifier.height(64.dp))
-
-        // Scaffolding, removed on Day 10: the Day 1 service check and the Day 2 mockups are no
-        // longer the launch screen, and this is the only way back to them while they are still
-        // useful for debugging a Firebase or Cloudinary problem.
-        TextButton(onClick = onOpenDevTools) {
-            Text(
-                text = "Dev tools",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.outline,
-            )
-        }
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(32.dp))
     }
 }
 
@@ -168,7 +152,6 @@ fun LoginScreen(
 fun LoginRoute(
     onSignedIn: () -> Unit,
     onCreateAccount: () -> Unit,
-    onOpenDevTools: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: LoginViewModel = viewModel(),
 ) {
@@ -187,7 +170,6 @@ fun LoginRoute(
         onPasswordChange = viewModel::onPasswordChange,
         onSubmit = viewModel::logIn,
         onCreateAccount = onCreateAccount,
-        onOpenDevTools = onOpenDevTools,
         modifier = modifier,
     )
 }
@@ -202,7 +184,6 @@ private fun LoginScreenPreview() {
             onPasswordChange = {},
             onSubmit = {},
             onCreateAccount = {},
-            onOpenDevTools = {},
         )
     }
 }
@@ -222,7 +203,6 @@ private fun LoginScreenErrorPreview() {
             onPasswordChange = {},
             onSubmit = {},
             onCreateAccount = {},
-            onOpenDevTools = {},
         )
     }
 }
@@ -241,7 +221,6 @@ private fun LoginScreenSubmittingPreview() {
             onPasswordChange = {},
             onSubmit = {},
             onCreateAccount = {},
-            onOpenDevTools = {},
         )
     }
 }
