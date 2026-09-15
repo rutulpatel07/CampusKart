@@ -211,6 +211,23 @@ wallpaper, which would make the development device, the demo device and the READ
 three different colours. The app ships a fixed green-teal scheme with a hand-written dark
 variant instead.
 
+### Screenshots
+
+<div align="center">
+  <div style="display: flex; overflow-x: auto; gap: 10px; padding: 10px; width: 100%; max-width: 900px; scroll-behavior: smooth; -webkit-overflow-scrolling: touch;">
+    <img src="https://github.com/user-attachments/assets/ad4bc493-c6ec-46b6-acf0-8f457c474313" alt="Login" width="220" style="border-radius: 10px; flex-shrink: 0; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+    <img src="https://github.com/user-attachments/assets/7080b39b-ee4c-489d-8ed9-cf0fa3b8614f" alt="Create Account" width="220" style="border-radius: 10px; flex-shrink: 0; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+    <img src="https://github.com/user-attachments/assets/8900876d-51bd-4dd2-87d4-a28463d521ad" alt="Home Feed" width="220" style="border-radius: 10px; flex-shrink: 0; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+    <img src="https://github.com/user-attachments/assets/2e7437f8-7ffc-4dbe-a39c-f85f06406289" alt="Post Item – Empty" width="220" style="border-radius: 10px; flex-shrink: 0; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+    <img src="https://github.com/user-attachments/assets/42c1795e-4ed9-4c68-beb5-a243938a9ac9" alt="Post Item – Filled" width="220" style="border-radius: 10px; flex-shrink: 0; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+    <img src="https://github.com/user-attachments/assets/fd82440c-e90d-4a85-bde4-2e41623b7de9" alt="Listing Published" width="220" style="border-radius: 10px; flex-shrink: 0; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+    <img src="https://github.com/user-attachments/assets/0e11d3f5-49b6-4396-a957-fa85c7678fb9" alt="Updated Feed" width="220" style="border-radius: 10px; flex-shrink: 0; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+    <img src="https://github.com/user-attachments/assets/8edba680-39de-4391-9c84-8acd8f831bde" alt="My Listings" width="220" style="border-radius: 10px; flex-shrink: 0; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+    <img src="https://github.com/user-attachments/assets/9d4ec125-c259-4415-a669-c12d27709e65" alt="Profile" width="220" style="border-radius: 10px; flex-shrink: 0; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+  </div>
+  <sub>Login · Create Account · Home Feed · Post Item (empty) · Post Item (filled) · Published · Updated Feed · My Listings · Profile</sub>
+</div>
+
 ---
 
 ## Navigation
