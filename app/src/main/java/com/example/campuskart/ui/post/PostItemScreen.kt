@@ -78,6 +78,7 @@ fun PostItemScreen(
     onChoosePhoto: () -> Unit,
     onPublish: () -> Unit,
     onPostAnother: () -> Unit,
+    onGoToFeed: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -93,6 +94,7 @@ fun PostItemScreen(
             PublishedCard(
                 listing = published,
                 onPostAnother = onPostAnother,
+                onGoToFeed = onGoToFeed,
                 modifier = Modifier
                     .padding(inner)
                     .fillMaxSize(),
@@ -373,6 +375,7 @@ private fun PhotoField(
 private fun PublishedCard(
     listing: Listing,
     onPostAnother: () -> Unit,
+    onGoToFeed: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var photoFailed by rememberSaveable(listing.photoUrl) { mutableStateOf(false) }
@@ -438,6 +441,15 @@ private fun PublishedCard(
         }
 
         Button(
+            onClick = onGoToFeed,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
+        ) {
+            Text("View on Feed", style = MaterialTheme.typography.titleMedium)
+        }
+
+        OutlinedButton(
             onClick = onPostAnother,
             modifier = Modifier
                 .fillMaxWidth()
@@ -447,8 +459,8 @@ private fun PublishedCard(
         }
 
         Text(
-            text = "It is on the Feed now, and on My items - where you can edit it, mark it sold " +
-                "or delete it. The document is in Firestore: listings/${listing.id}",
+            text = "Your listing is live on the Feed and in My items, where you can edit it, " +
+                "mark it sold or delete it.",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -473,6 +485,7 @@ private fun PublishedCard(
  */
 @Composable
 fun PostItemRoute(
+    onGoToFeed: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: PostItemViewModel = viewModel(),
 ) {
@@ -506,6 +519,7 @@ fun PostItemRoute(
         },
         onPublish = viewModel::publish,
         onPostAnother = viewModel::startAnother,
+        onGoToFeed = onGoToFeed,
         modifier = modifier,
     )
 }
@@ -530,6 +544,7 @@ private fun PostItemEmptyPreview() {
             onChoosePhoto = {},
             onPublish = {},
             onPostAnother = {},
+            onGoToFeed = {},
         )
     }
 }
@@ -550,6 +565,7 @@ private fun PostItemErrorPreview() {
             onChoosePhoto = {},
             onPublish = {},
             onPostAnother = {},
+            onGoToFeed = {},
         )
     }
 }
@@ -570,6 +586,7 @@ private fun PostItemPublishingPreview() {
             onChoosePhoto = {},
             onPublish = {},
             onPostAnother = {},
+            onGoToFeed = {},
         )
     }
 }
@@ -595,6 +612,7 @@ private fun PostItemPublishedPreview() {
             onChoosePhoto = {},
             onPublish = {},
             onPostAnother = {},
+            onGoToFeed = {},
         )
     }
 }

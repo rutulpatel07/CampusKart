@@ -110,7 +110,11 @@ fun CampusKartApp(modifier: Modifier = Modifier) {
                 )
             }
 
-            composable(Routes.POST) { PostItemRoute() }
+            composable(Routes.POST) {
+                PostItemRoute(
+                    onGoToFeed = { navController.switchTab(TopLevelDestination.FEED) },
+                )
+            }
 
             composable(Routes.MY_LISTINGS) {
                 MyListingsRoute(

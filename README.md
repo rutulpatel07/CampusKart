@@ -116,7 +116,7 @@ have added your own.
 
 ### Shipped
 
-- **Day 1** — Firebase Auth, Cloud Firestore, Cloudinary, Coil and CameraX wired into the build,
+- **Day 1** — Firebase Auth, Cloud Firestore, Cloudinary and Coil wired into the build,
   with an on-device connectivity check confirming every service is reachable.
 - **Day 2** — Mid-fidelity Compose mockups of all six screens, a fixed green-teal Material3
   theme, and an on-device gallery for reviewing the sketches before any real screen is built.
