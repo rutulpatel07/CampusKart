@@ -103,6 +103,7 @@
 | photoUrl | string | Cloudinary URL |
 | sellerUid | string | References `users.uid` |
 | sellerName | string | Denormalized for feed display |
+| sellerBranch | string | Denormalized — feed cards show seller branch (Section 9) without a second query |
 | status | string | available / sold |
 | createdAt | timestamp | |
 
@@ -157,8 +158,8 @@ This satisfies the assignment's "sharing Android data among others" objective (i
 ## 13. Open Items / Future Considerations
 
 - Lightweight trust signal for open (non-college-restricted) signup — e.g. self-declared branch/semester shown on listings — may be revisited post-MVP
-- ML Kit category-to-label mapping table not yet finalized — needed before Layer 2.5 work starts
-- Firestore security rules (who can edit/delete which documents) to be written alongside Layer 1
+- ~~ML Kit category-to-label mapping table not yet finalized~~ — Done (Day 9, see `CategorySuggestion.kt`)
+- ~~Firestore security rules~~ — Done (Day 8, see `firestore.rules`)
 
 ---
 

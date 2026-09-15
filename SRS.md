@@ -71,7 +71,7 @@ CampusKart is a standalone, self-contained mobile application. It is not part of
 ### 2.5 Assumptions and Dependencies
 - Assumes continued free-tier availability of Firebase Auth, Firestore, and Cloudinary through the project timeline
 - Assumes test/demo devices have Google Play Services and WhatsApp installed
-- Assumes ML Kit's pretrained image labels can be reasonably mapped to the app's fixed category list (Books, Drafter, Lab Coat, Calculator, Cycle, Electronics, Other) — this mapping is not yet finalized (see Open Items in PRD.md)
+- Assumes ML Kit's pretrained image labels can be reasonably mapped to the app's fixed category list (Books, Drafter, Lab Coat, Calculator, Cycle, Electronics, Other) — this mapping was finalized on Day 9 (see `CategorySuggestion.kt`)
 
 ---
 
@@ -160,4 +160,4 @@ All functional requirements above trace back to the app's core goal stated in PR
 
 ---
 
-*This SRS should be updated if scope changes during development — particularly once the ML Kit label-to-category mapping (currently an open item in PRD.md) is finalized.*
+*This SRS should be updated if scope changes during development.*
