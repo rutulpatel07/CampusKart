@@ -134,21 +134,8 @@ and exposes them to the app as `BuildConfig.CLOUDINARY_CLOUD_NAME` and
 
 1. In Android Studio, click **File → Sync Project with Gradle Files**.
 2. Run the app on a device or emulator **that has internet access**.
-3. The app shows a temporary **Day 1 setup check** screen listing five checks:
-
-   | Check | What a PASS means |
-   |---|---|
-   | Firebase config | Your real `google-services.json` was found and read |
-   | Firebase Auth SDK | The Auth SDK initialised (nobody is signed in yet — that's expected) |
-   | Cloud Firestore | The app completed a real round trip to your database |
-   | Cloudinary config | Both values in `local.properties` are filled in |
-   | Cloudinary reachable | Your cloud name is correct and Cloudinary served an image |
-
-   The same lines are also written to Logcat under the tag **`CampusKartSetup`**.
-
-4. **All five should read PASS.** If any read FAIL, the message on the card says what to fix.
-
-Once everything passes, Day 1 is done and the setup screen gets replaced by real UI on Day 3.
+3. The app should build and launch to the **Login screen**. If it does, Firebase and Gradle are wired correctly.
+4. Create an account (Signup) and post a test listing to verify Cloudinary uploads work.
 
 ---
 

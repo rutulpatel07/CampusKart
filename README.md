@@ -52,7 +52,7 @@ The short version:
 3. Create a Cloudinary account and an **unsigned** upload preset.
 4. Fill in `cloudinary.cloudName` and `cloudinary.uploadPreset` at the bottom of
    `local.properties`.
-5. Sync Gradle and run. The temporary setup screen should show five green PASS rows.
+5. Sync Gradle and run. You should see the Login screen.
 6. **Deploy the Firestore rules and indexes** before sharing the app beyond your own test
    account — see below.
 
